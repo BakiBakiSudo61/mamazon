@@ -7,8 +7,8 @@ ALLOWED_ORIGINS = "https://mamazon.seatail.net,https://mamazon.pages.dev,http://
 COOKIE_DOMAIN = "seatail.net"
 
 [[routes]]
-pattern = "api.mamazon.seatail.net/*"
-zone_name = "seatail.net"
+pattern = "api.mamazon.seatail.net"
+custom_domain = true
 
 # D1 Database
 [[d1_databases]]
