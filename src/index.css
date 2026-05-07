@@ -1,29 +1,29 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Futuristic Dark Theme */
-  --bg-main: #060b19;
-  --surface-0: rgba(16, 23, 42, 0.6);
-  --surface-1: rgba(30, 41, 59, 0.7);
-  --surface-2: rgba(51, 65, 85, 0.8);
-  --surface-3: rgba(71, 85, 105, 0.9);
+  /* Futuristic Light Theme */
+  --bg-main: #f8fafc;
+  --surface-0: rgba(255, 255, 255, 0.7);
+  --surface-1: rgba(255, 255, 255, 0.8);
+  --surface-2: rgba(241, 245, 249, 0.9);
+  --surface-3: rgba(226, 232, 240, 1);
   
   /* Borders and Glass */
-  --border: rgba(148, 163, 184, 0.15);
-  --border-glow: rgba(56, 189, 248, 0.3);
-  --glass-blur: blur(12px);
+  --border: rgba(148, 163, 184, 0.3);
+  --border-glow: rgba(56, 189, 248, 0.4);
+  --glass-blur: blur(16px);
 
   /* Text Colors */
-  --text: #f8fafc;
-  --text-muted: #94a3b8;
+  --text: #0f172a;
+  --text-muted: #64748b;
   --text-dark: #0f172a;
   
   /* Brand / Neon Accents */
-  --accent: #0ea5e9;
-  --accent-hover: #38bdf8;
-  --accent-glow: 0 0 15px rgba(14, 165, 233, 0.5);
-  --amazon-orange: #fb923c;
-  --amazon-orange-hover: #f97316;
+  --accent: #0284c7;
+  --accent-hover: #0369a1;
+  --accent-glow: 0 0 15px rgba(2, 132, 199, 0.3);
+  --amazon-orange: #f97316;
+  --amazon-orange-hover: #ea580c;
   --red: #ef4444;
   --green: #10b981;
   
@@ -44,8 +44,8 @@ body {
   font-family: 'Inter', sans-serif;
   background-color: var(--bg-main);
   background-image: 
-    radial-gradient(circle at 15% 50%, rgba(14, 165, 233, 0.05), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.05), transparent 25%);
+    radial-gradient(circle at 15% 50%, rgba(14, 165, 233, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.08), transparent 25%);
   background-attachment: fixed;
   color: var(--text);
   -webkit-font-smoothing: antialiased;

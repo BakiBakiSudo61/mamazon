@@ -141,8 +141,8 @@ export const ProductDetail: React.FC = () => {
 
             {product.is_featured === 1 && (
               <div className={styles.primeBanner}>
-                <span className={styles.primeLogo}>Prime <span className={styles.primeNeo}>NEO</span></span>
-                <span>無料の近未来配送</span>
+                <span className={styles.primeLogo}>Prime</span>
+                <span>お急ぎ便無料</span>
               </div>
             )}
 
@@ -224,7 +224,7 @@ export const ProductDetail: React.FC = () => {
               <div className={styles.sellerInfo}>
                 <div className={styles.sellerRow}>
                   <span className={styles.sellerLabel}>出荷元</span>
-                  <span className={styles.sellerValue}>Mamazon Neo</span>
+                  <span className={styles.sellerValue}>Mamazon</span>
                 </div>
                 <div className={styles.sellerRow}>
                   <span className={styles.sellerLabel}>販売元</span>

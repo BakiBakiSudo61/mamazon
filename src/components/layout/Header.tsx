@@ -32,7 +32,7 @@ export const Header: React.FC = () => {
           </button>
           <Link to="/home" className={styles.logo}>
             <Zap size={28} className={styles.logoIcon} />
-            <span className={styles.logoText}>MAMAZON<span className={styles.logoPrime}>NEO</span></span>
+            <span className={styles.logoText}>Mamazon</span>
           </Link>
         </div>
 
@@ -46,7 +46,7 @@ export const Header: React.FC = () => {
             <input
               className={styles.searchInput}
               type="text"
-              placeholder="近未来のアイテムを検索..."
+              placeholder="商品を検索..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -121,7 +121,7 @@ export const Header: React.FC = () => {
             <Link to="/home" className={styles.subLink}>閲覧履歴</Link>
           </div>
           <div className={styles.subRight}>
-            <span className={styles.primeLink}>Prime Neoを始める</span>
+            <span className={styles.primeLink}>プレミアムを始める</span>
           </div>
         </div>
       </div>
