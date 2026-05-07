@@ -7,6 +7,8 @@ export interface Env {
   GOOGLE_CLIENT_SECRET: string;
   JWT_SECRET: string;
   FRONTEND_URL?: string;
+  ALLOWED_ORIGINS?: string;
+  COOKIE_DOMAIN?: string;
 }
 
 export interface SessionData {

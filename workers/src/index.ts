@@ -7,16 +7,18 @@ import { handleSeller } from './routes/seller';
 import { handleUpload } from './routes/upload';
 import { getSession } from './middleware/auth';
 
-const ALLOWED_ORIGINS = [
+const FALLBACK_ORIGINS = [
+  'https://mamazon.seatail.net',
   'https://mamazon.pages.dev',
   'http://localhost:5173',
   'http://localhost:4173',
 ];
 
-function corsHeaders(origin: string) {
-  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+function corsHeaders(origin: string, env?: Env) {
+  const origins = env?.ALLOWED_ORIGINS?.split(',').map(s => s.trim()).filter(Boolean) ?? FALLBACK_ORIGINS;
+  const allowedOrigin = origins.includes(origin) ? origin : origins[0];
   return {
-    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Cookie',
@@ -41,7 +43,7 @@ export default {
 
     // CORS preflight
     if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders(origin) });
+      return new Response(null, { status: 204, headers: corsHeaders(origin, env) });
     }
 
     // Strip /v1 prefix
@@ -57,7 +59,7 @@ export default {
       if (authRes) {
         // Add CORS headers to auth responses
         const headers = new Headers(authRes.headers);
-        Object.entries(corsHeaders(origin)).forEach(([k, v]) => headers.set(k, v));
+        Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
         return new Response(authRes.body, {
           status: authRes.status,
           headers,
@@ -87,7 +89,7 @@ export default {
       const productRes = await handleProducts(path, request, env, session);
       if (productRes) {
         const headers = new Headers(productRes.headers);
-        Object.entries(corsHeaders(origin)).forEach(([k, v]) => headers.set(k, v));
+        Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
         return new Response(productRes.body, { status: productRes.status, headers });
       }
 
@@ -99,7 +101,7 @@ export default {
         const sellerRes = await handleSeller(path, request, env, session ?? { userId: '', email: '', exp: 0 });
         if (sellerRes) {
           const headers = new Headers(sellerRes.headers);
-          Object.entries(corsHeaders(origin)).forEach(([k, v]) => headers.set(k, v));
+          Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
           return new Response(sellerRes.body, { status: sellerRes.status, headers });
         }
       }
@@ -112,7 +114,7 @@ export default {
         const cartRes = await handleCart(path, request, env, session);
         if (cartRes) {
           const headers = new Headers(cartRes.headers);
-          Object.entries(corsHeaders(origin)).forEach(([k, v]) => headers.set(k, v));
+          Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
           return new Response(cartRes.body, { status: cartRes.status, headers });
         }
       }
@@ -122,7 +124,7 @@ export default {
         const orderRes = await handleOrders(path, request, env, session);
         if (orderRes) {
           const headers = new Headers(orderRes.headers);
-          Object.entries(corsHeaders(origin)).forEach(([k, v]) => headers.set(k, v));
+          Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
           return new Response(orderRes.body, { status: orderRes.status, headers });
         }
       }
@@ -132,7 +134,7 @@ export default {
         const sellerRes = await handleSeller(path, request, env, session);
         if (sellerRes) {
           const headers = new Headers(sellerRes.headers);
-          Object.entries(corsHeaders(origin)).forEach(([k, v]) => headers.set(k, v));
+          Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
           return new Response(sellerRes.body, { status: sellerRes.status, headers });
         }
       }
@@ -142,7 +144,7 @@ export default {
         const uploadRes = await handleUpload(path, request, env, session);
         if (uploadRes) {
           const headers = new Headers(uploadRes.headers);
-          Object.entries(corsHeaders(origin)).forEach(([k, v]) => headers.set(k, v));
+          Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
           return new Response(uploadRes.body, { status: uploadRes.status, headers });
         }
       }
