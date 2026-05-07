@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Search, User, Package, Store, Menu, X, LogOut, ChevronDown, Zap } from 'lucide-react';
+import { ShoppingCart, Search, User, Package, Store, Menu, X, LogOut, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore } from '../../stores/cartStore';
 import styles from './Header.module.css';
@@ -31,7 +31,6 @@ export const Header: React.FC = () => {
             {menuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
           <Link to="/home" className={styles.logo}>
-            <Zap size={28} className={styles.logoIcon} />
             <span className={styles.logoText}>Mamazon</span>
           </Link>
         </div>
@@ -51,7 +50,7 @@ export const Header: React.FC = () => {
               onChange={(e) => setQuery(e.target.value)}
             />
             <button type="submit" className={styles.searchBtn}>
-              <Search size={18} />
+              <Search size={20} color="#333" />
             </button>
           </div>
         </form>
@@ -100,30 +99,10 @@ export const Header: React.FC = () => {
             </>
           ) : (
             <Link to="/" className={styles.loginBtn}>
-              <span className={styles.loginBtnText}>ログイン / 登録</span>
-              <div className={styles.loginGlow}></div>
+              <span className={styles.loginBtnText}>ログイン</span>
             </Link>
           )}
         </nav>
-      </div>
-
-      {/* Sub Header */}
-      <div className={styles.subHeader}>
-        <div className={styles.subInner}>
-          <button className={styles.allBtn}>
-            <Menu size={16} /> すべて
-          </button>
-          <div className={styles.subLinks}>
-            <Link to="/home" className={styles.subLink}>タイムセール</Link>
-            <Link to="/home" className={styles.subLink}>ヘルプ</Link>
-            <Link to="/home" className={styles.subLink}>Mamazonベーシック</Link>
-            <Link to="/home" className={styles.subLink}>ギフト券</Link>
-            <Link to="/home" className={styles.subLink}>閲覧履歴</Link>
-          </div>
-          <div className={styles.subRight}>
-            <span className={styles.primeLink}>プレミアムを始める</span>
-          </div>
-        </div>
       </div>
     </header>
   );

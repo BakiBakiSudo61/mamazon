@@ -86,14 +86,12 @@
   position: relative;
   aspect-ratio: 1;
   background: #ffffff;
-  border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .mainImage {
@@ -236,14 +234,13 @@
 }
 
 .primeBanner {
-  background: rgba(14, 165, 233, 0.1);
-  border: 1px solid rgba(14, 165, 233, 0.3);
+  background: #ffffff;
+  border: 1px solid var(--border);
   padding: 0.75rem 1rem;
-  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   gap: 1rem;
-  color: var(--text);
+  color: #0f1111;
   font-size: 0.95rem;
   margin: 0.5rem 0;
 }
@@ -292,15 +289,13 @@
 }
 
 .buyBoxInner {
-  background: var(--surface-0);
-  backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: #ffffff;
+  border: 1px solid #d5d9d9;
+  border-radius: 8px;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 .buyBoxPrice {
@@ -370,29 +365,29 @@
 }
 
 .addToCartBtn {
-  background: var(--amazon-orange);
-  color: #000;
-  font-weight: 700;
-  border-radius: var(--radius-full);
+  background: var(--amazon-yellow);
+  color: #111111;
+  font-weight: 400;
+  border-radius: 100px;
+  border: 1px solid transparent;
+  box-shadow: 0 2px 5px rgba(15,17,17,.15);
 }
 
 .addToCartBtn:hover:not(:disabled) {
-  background: var(--amazon-orange-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(251, 146, 60, 0.4);
+  background: var(--amazon-yellow-hover);
 }
 
 .buyNowBtn {
-  background: var(--accent);
-  color: #000;
-  font-weight: 700;
-  border-radius: var(--radius-full);
+  background: var(--amazon-orange);
+  color: #111111;
+  font-weight: 400;
+  border-radius: 100px;
+  border: 1px solid transparent;
+  box-shadow: 0 2px 5px rgba(15,17,17,.15);
 }
 
 .buyNowBtn:hover:not(:disabled) {
-  background: var(--accent-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--accent-glow);
+  background: var(--amazon-orange-hover);
 }
 
 .sellerInfo {
