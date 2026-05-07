@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Star, ShoppingCart, Shield, ChevronLeft, ChevronRight, Truck, Clock, Lock, User } from 'lucide-react';
+import { Star, ShoppingCart, Shield, ChevronLeft, ChevronRight, Truck, Clock, Lock, User, Edit3, CheckCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { productsApi } from '../api/products';
 import { useCartStore } from '../stores/cartStore';
@@ -27,6 +27,36 @@ const StarRating: React.FC<{ rating: number; size?: number }> = ({ rating, size 
   </div>
 );
 
+const StarInput: React.FC<{ value: number; onChange: (v: number) => void }> = ({ value, onChange }) => {
+  const [hover, setHover] = useState(0);
+  return (
+    <div className={styles.starInput}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          className={styles.starBtn}
+          onMouseEnter={() => setHover(n)}
+          onMouseLeave={() => setHover(0)}
+          onClick={() => onChange(n)}
+          aria-label={`${n}星`}
+        >
+          <Star
+            size={28}
+            fill={(hover || value) >= n ? 'currentColor' : 'none'}
+            style={{ color: (hover || value) >= n ? '#fb923c' : 'var(--border)' }}
+          />
+        </button>
+      ))}
+      {value > 0 && (
+        <span className={styles.starLabel}>
+          {['', '星1つ', '星2つ', '星3つ', '星4つ', '星5つ'][value]}
+        </span>
+      )}
+    </div>
+  );
+};
+
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
@@ -35,6 +65,15 @@ export const ProductDetail: React.FC = () => {
   const [qty, setQty] = useState(1);
   const [loading, setLoading] = useState(true);
   const [addingCart, setAddingCart] = useState(false);
+
+  // Review form state
+  const [eligibleOrderId, setEligibleOrderId] = useState<string | null>(null);
+  const [alreadyReviewed, setAlreadyReviewed] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewBody, setReviewBody] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   const addItem = useCartStore((s) => s.addItem);
   const user = useAuthStore((s) => s.user);
@@ -55,6 +94,17 @@ export const ProductDetail: React.FC = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // eligibility check (runs when user is logged in)
+  useEffect(() => {
+    if (!id || !user) return;
+    productsApi.getReviewEligibility(id)
+      .then((r) => {
+        setEligibleOrderId(r.order_id);
+        setAlreadyReviewed(r.already_reviewed);
+      })
+      .catch(() => {});
+  }, [id, user]);
+
   const images = product?.images_json ? JSON.parse(product.images_json) : [PLACEHOLDER];
 
   const handleAddToCart = async () => {
@@ -74,6 +124,32 @@ export const ProductDetail: React.FC = () => {
     if (!user) { addToast({ type: 'info', message: 'ログインが必要です' }); return; }
     // Simulated buy now logic
     addToast({ type: 'success', message: '1-Clickで注文を確定しました（仮想）' });
+  };
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !eligibleOrderId) return;
+    if (reviewRating === 0) { addToast({ type: 'error', message: '星評価を選択してください' }); return; }
+    setSubmittingReview(true);
+    try {
+      const newReview = await productsApi.postReview(id, {
+        rating: reviewRating,
+        title: reviewTitle || undefined,
+        body: reviewBody || undefined,
+        order_id: eligibleOrderId,
+      });
+      setReviews((prev) => [newReview, ...prev]);
+      setAlreadyReviewed(true);
+      setShowReviewForm(false);
+      setReviewRating(0); setReviewTitle(''); setReviewBody('');
+      // refresh product rating
+      productsApi.get(id).then(setProduct).catch(() => {});
+      addToast({ type: 'success', message: 'レビューを投稿しました' });
+    } catch (err: unknown) {
+      addToast({ type: 'error', message: err instanceof Error ? err.message : 'レビューの投稿に失敗しました' });
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
   if (loading) return <div className={styles.loading}><div></div></div>;
@@ -260,9 +336,72 @@ export const ProductDetail: React.FC = () => {
                 <p className={styles.summaryCount}>星5つ中の{product.rating.toFixed(1)}</p>
                 <p className={styles.summaryTotal}>{product.review_count}件のグローバル評価</p>
               </div>
+
+              {/* Review CTA */}
+              <div className={styles.reviewCta}>
+                <h3>レビューを書く</h3>
+                {!user ? (
+                  <p className={styles.reviewCtaHint}>レビューを投稿するには<Link to="/">ログイン</Link>が必要です</p>
+                ) : alreadyReviewed ? (
+                  <div className={styles.reviewedBadge}>
+                    <CheckCircle size={16} />
+                    <span>レビュー済み</span>
+                  </div>
+                ) : !eligibleOrderId ? (
+                  <p className={styles.reviewCtaHint}>この商品を購入するとレビューを書けます</p>
+                ) : showReviewForm ? null : (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setShowReviewForm(true)}
+                  >
+                    <Edit3 size={14} /> レビューを書く
+                  </Button>
+                )}
+              </div>
             </div>
-            
+
             <div className={styles.reviewContent}>
+              {/* Review Form */}
+              {showReviewForm && eligibleOrderId && !alreadyReviewed && (
+                <form className={styles.reviewForm} onSubmit={handleReviewSubmit}>
+                  <h3 className={styles.reviewFormTitle}>レビューを投稿する</h3>
+                  <div className={styles.reviewFormField}>
+                    <label className={styles.reviewFormLabel}>総合評価 <span className={styles.required}>*</span></label>
+                    <StarInput value={reviewRating} onChange={setReviewRating} />
+                  </div>
+                  <div className={styles.reviewFormField}>
+                    <label className={styles.reviewFormLabel}>タイトル</label>
+                    <input
+                      className={styles.reviewFormInput}
+                      type="text"
+                      value={reviewTitle}
+                      onChange={(e) => setReviewTitle(e.target.value)}
+                      placeholder="レビューの見出し（任意）"
+                      maxLength={100}
+                    />
+                  </div>
+                  <div className={styles.reviewFormField}>
+                    <label className={styles.reviewFormLabel}>レビュー本文</label>
+                    <textarea
+                      className={styles.reviewFormTextarea}
+                      value={reviewBody}
+                      onChange={(e) => setReviewBody(e.target.value)}
+                      placeholder="商品の使用感などを書いてください（任意）"
+                      rows={4}
+                    />
+                  </div>
+                  <div className={styles.reviewFormActions}>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setShowReviewForm(false)}>
+                      キャンセル
+                    </Button>
+                    <Button type="submit" size="sm" loading={submittingReview}>
+                      投稿する
+                    </Button>
+                  </div>
+                </form>
+              )}
+
               {reviews.length === 0 ? (
                 <div className={styles.noReviewBox}>
                   <Shield size={32} className={styles.noReviewIcon} />
@@ -274,9 +413,13 @@ export const ProductDetail: React.FC = () => {
                     <div key={r.id} className={styles.reviewCard}>
                       <div className={styles.reviewUser}>
                         <div className={styles.userAvatar}>
-                          <User size={16} />
+                          {r.avatar_url ? (
+                            <img src={r.avatar_url} alt={r.display_name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                          ) : (
+                            <User size={16} />
+                          )}
                         </div>
-                        <span>{r.user?.display_name ?? '匿名ユーザー'}</span>
+                        <span>{r.display_name ?? r.user?.display_name ?? '匿名ユーザー'}</span>
                       </div>
                       <div className={styles.reviewHeader}>
                         <StarRating rating={r.rating} size={14} />
@@ -286,7 +429,7 @@ export const ProductDetail: React.FC = () => {
                         {new Date(r.created_at).toLocaleDateString('ja-JP')} にレビュー済み
                       </span>
                       <span className={styles.verifiedBadge}>仮想購入者</span>
-                      <p className={styles.reviewBody}>{r.body}</p>
+                      {r.body && <p className={styles.reviewBody}>{r.body}</p>}
                     </div>
                   ))}
                 </div>

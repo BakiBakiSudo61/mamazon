@@ -73,6 +73,9 @@ export interface Review {
   body?: string;
   helpful: number;
   created_at: string;
+  // flat fields from JOIN (Workers returns these directly)
+  display_name?: string;
+  avatar_url?: string;
   user?: User;
 }
 

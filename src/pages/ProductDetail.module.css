@@ -564,3 +564,59 @@
   margin: 0.5rem 0 0; 
   line-height: 1.6; 
 }
+
+/* Review CTA in sidebar */
+.reviewCta {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.reviewCta h3 { font-size: 1rem; margin: 0; }
+.reviewCtaHint { font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5; }
+.reviewCtaHint a { color: var(--accent); }
+.reviewedBadge {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  color: #00c864; font-size: 0.88rem; font-weight: 600;
+}
+
+/* Star input */
+.starInput { display: flex; align-items: center; gap: 0.25rem; }
+.starBtn {
+  background: none; border: none; cursor: pointer; padding: 2px;
+  display: flex; align-items: center;
+  transition: transform 0.1s;
+}
+.starBtn:hover { transform: scale(1.2); }
+.starLabel { font-size: 0.88rem; color: var(--text-muted); margin-left: 0.5rem; }
+
+/* Review form */
+.reviewForm {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.reviewFormTitle { font-size: 1rem; font-weight: 700; margin: 0; }
+.reviewFormField { display: flex; flex-direction: column; gap: 0.4rem; }
+.reviewFormLabel { font-size: 0.85rem; font-weight: 500; color: var(--text-muted); }
+.required { color: var(--error, #d32f2f); }
+.reviewFormInput {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-md); color: var(--text);
+  padding: 0.55rem 0.9rem; font-size: 0.95rem; outline: none; font-family: inherit;
+}
+.reviewFormInput:focus { border-color: var(--accent); }
+.reviewFormTextarea {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-md); color: var(--text);
+  padding: 0.55rem 0.9rem; font-size: 0.95rem; outline: none;
+  resize: vertical; font-family: inherit;
+}
+.reviewFormTextarea:focus { border-color: var(--accent); }
+.reviewFormActions { display: flex; justify-content: flex-end; gap: 0.75rem; }

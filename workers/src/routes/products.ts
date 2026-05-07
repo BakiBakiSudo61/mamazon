@@ -89,6 +89,30 @@ export async function handleProducts(
     return json({ reviews: rows.results });
   }
 
+  // GET /products/:id/review-eligibility (auth required)
+  const eligibilityMatch = path.match(/^\/products\/([^/]+)\/review-eligibility$/);
+  if (eligibilityMatch && request.method === 'GET') {
+    if (!session) return json({ eligible: false, order_id: null, already_reviewed: false });
+    const productId = eligibilityMatch[1];
+    const [orderRow, reviewRow] = await Promise.all([
+      env.DB.prepare(
+        `SELECT oi.order_id FROM order_items oi
+         JOIN orders o ON oi.order_id = o.id
+         WHERE oi.product_id = ? AND o.buyer_user_id = ?
+         LIMIT 1`
+      ).bind(productId, session.userId).first<{ order_id: string }>(),
+      env.DB.prepare(
+        `SELECT id, rating, title, body FROM reviews WHERE product_id = ? AND user_id = ?`
+      ).bind(productId, session.userId).first(),
+    ]);
+    return json({
+      eligible: !!orderRow,
+      order_id: orderRow?.order_id ?? null,
+      already_reviewed: !!reviewRow,
+      my_review: reviewRow ?? null,
+    });
+  }
+
   // POST /products/:id/reviews (auth required)
   if (reviewsMatch && request.method === 'POST') {
     if (!session) return json({ error: '認証が必要です' }, 401);
@@ -99,13 +123,27 @@ export async function handleProducts(
     if (!body.rating || body.rating < 1 || body.rating > 5) {
       return json({ error: '評価は1〜5で指定してください' }, 400);
     }
+
+    // 重複チェック
+    const existing = await env.DB.prepare(
+      'SELECT id FROM reviews WHERE product_id = ? AND user_id = ?'
+    ).bind(productId, session.userId).first();
+    if (existing) return json({ error: 'すでにレビューを投稿済みです' }, 409);
+
+    // 購入チェック
+    const orderRow = await env.DB.prepare(
+      `SELECT oi.order_id FROM order_items oi
+       JOIN orders o ON oi.order_id = o.id
+       WHERE oi.product_id = ? AND o.buyer_user_id = ? LIMIT 1`
+    ).bind(productId, session.userId).first<{ order_id: string }>();
+    if (!orderRow) return json({ error: 'この商品を購入した後にレビューできます' }, 403);
+
     const id = crypto.randomUUID();
     await env.DB.prepare(
       `INSERT INTO reviews (id, product_id, user_id, order_id, rating, title, body)
        VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).bind(id, productId, session.userId, body.order_id, body.rating, body.title ?? null, body.body ?? null).run();
+    ).bind(id, productId, session.userId, orderRow.order_id, body.rating, body.title ?? null, body.body ?? null).run();
 
-    // Update product rating
     await env.DB.prepare(`
       UPDATE products SET
         rating = (SELECT AVG(rating) FROM reviews WHERE product_id = ?),
@@ -113,7 +151,11 @@ export async function handleProducts(
       WHERE id = ?
     `).bind(productId, productId, productId).run();
 
-    return json({ ok: true, id });
+    const review = await env.DB.prepare(
+      `SELECT r.*, u.display_name, u.avatar_url FROM reviews r
+       LEFT JOIN users u ON r.user_id = u.id WHERE r.id = ?`
+    ).bind(id).first();
+    return json(review, 201);
   }
 
   return null;

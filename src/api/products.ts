@@ -20,6 +20,9 @@ export const productsApi = {
 
   getReviews: (id: string) => api.get<{ reviews: Review[] }>(`/products/${id}/reviews`),
 
+  getReviewEligibility: (id: string) =>
+    api.get<{ eligible: boolean; order_id: string | null; already_reviewed: boolean }>(`/products/${id}/review-eligibility`),
+
   postReview: (
     id: string,
     data: { rating: number; title?: string; body?: string; order_id: string }
