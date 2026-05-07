@@ -5,6 +5,7 @@ compatibility_date = "2024-09-23"
 [vars]
 ALLOWED_ORIGINS = "https://mamazon.seatail.net,https://mamazon.pages.dev,http://localhost:5173,http://localhost:4173"
 COOKIE_DOMAIN = "seatail.net"
+FRONTEND_URL = "https://mamazon.seatail.net"
 
 [[routes]]
 pattern = "api.mamazon.seatail.net"
