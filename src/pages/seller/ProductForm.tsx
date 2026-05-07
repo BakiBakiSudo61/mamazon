@@ -175,6 +175,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ mode }) => {
                   const v = e.target.value.replace(/[^0-9]/g, '');
                   if (v === '' || isValidPrice(v)) setForm((f) => ({ ...f, price: v || '1' }));
                 }}
+                error={form.price && !isValidPrice(form.price) ? '1無量大数未満の値を入力してください' : undefined}
                 required
               />
               <Input

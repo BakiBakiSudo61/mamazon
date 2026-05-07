@@ -45,6 +45,10 @@ export async function handleSeller(
     if (!store) return json({ error: 'ストアが見つかりません' }, 404);
 
     const body = await request.json() as Record<string, unknown>;
+    const priceStr = String(body.price ?? '0').replace(/[^0-9]/g, '');
+    if (!/^\d+$/.test(priceStr) || priceStr.length > 68) {
+      return json({ error: '価格は1無量大数未満の正の整数で入力してください' }, 400);
+    }
     const id = crypto.randomUUID();
 
     await env.DB.prepare(`
@@ -53,7 +57,7 @@ export async function handleSeller(
     `).bind(
       id, store.id,
       body.name, body.description ?? null,
-      body.price, body.stock ?? 0,
+      priceStr, body.stock ?? 0,
       body.category ?? 'その他',
       body.condition ?? 'new',
       body.is_featured ?? 0,
@@ -74,6 +78,10 @@ export async function handleSeller(
     if (!store) return json({ error: 'ストアが見つかりません' }, 404);
 
     const body = await request.json() as Record<string, unknown>;
+    const priceStr = String(body.price ?? '0').replace(/[^0-9]/g, '');
+    if (!/^\d+$/.test(priceStr) || priceStr.length > 68) {
+      return json({ error: '価格は1無量大数未満の正の整数で入力してください' }, 400);
+    }
     await env.DB.prepare(`
       UPDATE products SET
         name = ?, description = ?, price = ?, stock = ?,
@@ -81,7 +89,7 @@ export async function handleSeller(
       WHERE id = ? AND store_id = ?
     `).bind(
       body.name, body.description ?? null,
-      body.price, body.stock ?? 0,
+      priceStr, body.stock ?? 0,
       body.category, body.condition ?? 'new',
       body.is_featured ?? 0, body.images_json ?? '[]',
       productId, store.id

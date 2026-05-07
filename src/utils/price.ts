@@ -89,5 +89,6 @@ export function priceToString(price: bigint | string | number): string {
  * 入力値を検証（0以上の整数文字列か）
  */
 export function isValidPrice(value: string): boolean {
-  return /^\d+$/.test(value) && value.length <= 69; // 無量大数(10^68)は69桁以下
+  // 1無量大数(10^68)未満 = 最大68桁
+  return /^\d+$/.test(value) && value.length <= 68;
 }
