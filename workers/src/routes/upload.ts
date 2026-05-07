@@ -37,8 +37,9 @@ export async function handleUpload(
       httpMetadata: { contentType: file.type },
     });
 
-    // Public URL via R2 custom domain or public bucket
-    const imageUrl = `https://images.${new URL(request.url).hostname.split('.').slice(-2).join('.')}/${key}`;
+    // Worker proxy URL: GET /v1/images/{key}
+    const workerOrigin = new URL(request.url).origin;
+    const imageUrl = `${workerOrigin}/v1/images/${key}`;
 
     return json({ url: imageUrl });
   }

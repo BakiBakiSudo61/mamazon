@@ -66,6 +66,21 @@ export default {
         });
       }
 
+      // R2 image proxy (no auth required)
+      if (path.startsWith('/images/') && request.method === 'GET') {
+        const key = path.slice('/images/'.length);
+        if (!key) return new Response('Not Found', { status: 404 });
+        const obj = await env.IMAGES.get(key);
+        if (!obj) return new Response('Not Found', { status: 404 });
+        return new Response(obj.body, {
+          headers: {
+            'Content-Type': obj.httpMetadata?.contentType ?? 'application/octet-stream',
+            'Cache-Control': 'public, max-age=31536000, immutable',
+            ...corsHeaders(origin, env),
+          },
+        });
+      }
+
       // User profile & balance (session required)
       if (path === '/users/me' && request.method === 'PUT') {
         const session = await getSession(request, env);
