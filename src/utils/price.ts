@@ -20,7 +20,9 @@ const JP_UNITS_CORRECT: { value: bigint; name: string }[] = [
 ];
 
 /**
- * 価格文字列（または数値）を ¥XXX万YYY形式にフォーマット
+ * 価格文字列（または数値）をフォーマット
+ * 億未満: ¥1,234,567 形式
+ * 億以上: ¥1億2,345万6,789 形式
  */
 export function formatPrice(price: bigint | string | number): string {
   let val: bigint;
@@ -29,19 +31,20 @@ export function formatPrice(price: bigint | string | number): string {
   } catch {
     val = 0n;
   }
-  if (val < 0n) return '¥0';
-  if (val === 0n) return '¥0';
+  if (val <= 0n) return '¥0';
 
-  // BigInt -> 3桁区切り文字列（環境によりBigInt.toLocaleString()が効かない場合に対応）
+  // BigInt -> 3桁区切り文字列
   function fmt(n: bigint): string {
     return Number(n).toLocaleString('ja-JP');
   }
 
-  // 1万未満はそのまま3桁区切り
-  if (val < 10000n) {
+  // 億未満はそのまま3桁区切り（例: ¥100,000）
+  const OKU = 10n ** 8n;
+  if (val < OKU) {
     return '¥' + fmt(val);
   }
 
+  // 億以上は単位フォーマット（億・兆・京 …）
   const parts: string[] = [];
   let remaining = val;
 
@@ -53,7 +56,7 @@ export function formatPrice(price: bigint | string | number): string {
     }
   }
 
-  // 1万未満の端数（4桁ゼロ埋めなし、3桁区切りのみ）
+  // 1万未満の端数
   if (remaining > 0n) {
     parts.push(fmt(remaining));
   }

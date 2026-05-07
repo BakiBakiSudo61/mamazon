@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Star, ShoppingCart, Shield, ChevronLeft, ChevronRight, Truck, Clock, Lock, User, Edit3, CheckCircle } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Star, ShoppingCart, Shield, ChevronLeft, ChevronRight, Truck, Clock, Lock, User, Edit3, CheckCircle, ArrowLeft } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { productsApi } from '../api/products';
 import { useCartStore } from '../stores/cartStore';
@@ -78,6 +78,7 @@ export const ProductDetail: React.FC = () => {
   const addItem = useCartStore((s) => s.addItem);
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!id) return;
@@ -158,16 +159,31 @@ export const ProductDetail: React.FC = () => {
   return (
     <div className={styles.page}>
       <div className={styles.inner}>
-        {/* Breadcrumb */}
-        <nav className={styles.breadcrumb}>
-          <Link to="/home">ホーム</Link> <span className={styles.separator}>&rsaquo;</span>
-          <Link to={`/search?c=${product.category}`}>{product.category}</Link> <span className={styles.separator}>&rsaquo;</span>
-          <span className={styles.current}>{product.name}</span>
-        </nav>
+        {/* Top nav: back button + breadcrumb */}
+        <div className={styles.topNav}>
+          <button className={styles.backBtn} onClick={() => navigate(-1)} aria-label="前のページに戻る">
+            <ArrowLeft size={18} />
+            <span>戻る</span>
+          </button>
+          <nav className={styles.breadcrumb}>
+            <Link to="/home">ホーム</Link> <span className={styles.separator}>&rsaquo;</span>
+            <Link to={`/search?c=${product.category}`}>{product.category}</Link> <span className={styles.separator}>&rsaquo;</span>
+            <span className={styles.current}>{product.name}</span>
+          </nav>
+        </div>
 
         <div className={styles.main}>
           {/* Column 1: Gallery */}
           <div className={styles.gallery}>
+            {/* Mobile-only: product name + brand above image */}
+            <div className={styles.mobileHeader}>
+              <h1 className={styles.mobileTitle}>{product.name}</h1>
+              {(product.store_name || product.store?.store_name) && (
+                <Link to={`/store/${product.store_id}`} className={styles.mobileBrand}>
+                  {product.store_name || product.store?.store_name}
+                </Link>
+              )}
+            </div>
             <div className={styles.mainImageWrap}>
               <img src={images[imgIndex] || PLACEHOLDER} alt={product.name} className={styles.mainImage} />
               {images.length > 1 && (
@@ -199,9 +215,9 @@ export const ProductDetail: React.FC = () => {
           {/* Column 2: Info */}
           <div className={styles.info}>
             <h1 className={styles.title}>{product.name}</h1>
-            {product.store && (
+            {(product.store_name || product.store?.store_name) && (
               <Link to={`/store/${product.store_id}`} className={styles.storeLink}>
-                ブランド: {product.store.store_name}
+                ブランド: {product.store_name || product.store?.store_name}
               </Link>
             )}
             
