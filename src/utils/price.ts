@@ -32,9 +32,14 @@ export function formatPrice(price: bigint | string | number): string {
   if (val < 0n) return '¥0';
   if (val === 0n) return '¥0';
 
+  // BigInt -> 3桁区切り文字列（環境によりBigInt.toLocaleString()が効かない場合に対応）
+  function fmt(n: bigint): string {
+    return Number(n).toLocaleString('ja-JP');
+  }
+
   // 1万未満はそのまま3桁区切り
   if (val < 10000n) {
-    return '¥' + val.toLocaleString();
+    return '¥' + fmt(val);
   }
 
   const parts: string[] = [];
@@ -44,13 +49,13 @@ export function formatPrice(price: bigint | string | number): string {
     if (remaining >= unit.value) {
       const quotient = remaining / unit.value;
       remaining = remaining % unit.value;
-      parts.push(quotient.toLocaleString() + unit.name);
+      parts.push(fmt(quotient) + unit.name);
     }
   }
 
-  // 1万未満の端数
+  // 1万未満の端数（4桁ゼロ埋めなし、3桁区切りのみ）
   if (remaining > 0n) {
-    parts.push(remaining.toLocaleString());
+    parts.push(fmt(remaining));
   }
 
   return '¥' + parts.join('');

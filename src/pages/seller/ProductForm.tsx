@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, Eye, Edit3 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { sellerApi } from '../../api/seller';
 import { useUIStore } from '../../stores/uiStore';
 import { Button } from '../../components/ui/Button';
@@ -24,8 +25,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({ mode }) => {
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [images, setImages] = useState<string[]>([]);
+  const [descTab, setDescTab] = useState<'write' | 'preview'>('write');
   const [form, setForm] = useState<Partial<Product>>({
-    name: '', description: '', price: '1', stock: 1,
+    name: '', description: '', price: '',  stock: 1,
     category: '電子機器', condition: 'new', is_featured: 0,
   });
 
@@ -131,14 +133,43 @@ export const ProductForm: React.FC<ProductFormProps> = ({ mode }) => {
             <h3>基本情報</h3>
             <Input label="商品名" value={form.name ?? ''} onChange={update('name')} required />
             <div className={styles.field}>
-              <label className={styles.label}>説明</label>
-              <textarea
-                className={styles.textarea}
-                value={form.description ?? ''}
-                onChange={update('description')}
-                rows={4}
-                placeholder="商品の説明を入力..."
-              />
+              <div className={styles.mdHeader}>
+                <label className={styles.label}>説明</label>
+                <div className={styles.mdTabs}>
+                  <button
+                    type="button"
+                    className={[styles.mdTab, descTab === 'write' ? styles.mdTabActive : ''].join(' ')}
+                    onClick={() => setDescTab('write')}
+                  >
+                    <Edit3 size={13} /> 編集
+                  </button>
+                  <button
+                    type="button"
+                    className={[styles.mdTab, descTab === 'preview' ? styles.mdTabActive : ''].join(' ')}
+                    onClick={() => setDescTab('preview')}
+                  >
+                    <Eye size={13} /> プレビュー
+                  </button>
+                </div>
+              </div>
+              {descTab === 'write' ? (
+                <textarea
+                  className={styles.textarea}
+                  value={form.description ?? ''}
+                  onChange={update('description')}
+                  rows={6}
+                  placeholder="Markdownで商品説明を入力できます。&#10;例: **太字** *斜体* - リスト"
+                />
+              ) : (
+                <div className={styles.mdPreview}>
+                  {form.description ? (
+                    <ReactMarkdown>{form.description}</ReactMarkdown>
+                  ) : (
+                    <p className={styles.mdEmpty}>説明がありません</p>
+                  )}
+                </div>
+              )}
+              <p className={styles.mdHint}>Markdown記法が使えます（**太字** *斜体* # 見出し - リスト）</p>
             </div>
           </div>
 
@@ -170,12 +201,16 @@ export const ProductForm: React.FC<ProductFormProps> = ({ mode }) => {
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                value={form.price ?? '1'}
+                value={form.price ?? ''}
                 onChange={(e) => {
                   const v = e.target.value.replace(/[^0-9]/g, '');
-                  if (v === '' || isValidPrice(v)) setForm((f) => ({ ...f, price: v || '1' }));
+                  if (v === '' || isValidPrice(v)) setForm((f) => ({ ...f, price: v }));
                 }}
-                error={form.price && !isValidPrice(form.price) ? '1無量大数未満の値を入力してください' : undefined}
+                error={
+                  form.price !== '' && form.price != null && !isValidPrice(form.price)
+                    ? '1無量大数未満の値を入力してください'
+                    : undefined
+                }
                 required
               />
               <Input

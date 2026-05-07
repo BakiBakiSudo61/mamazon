@@ -73,6 +73,38 @@
 
 .field { display: flex; flex-direction: column; gap: 0.35rem; }
 .label { font-size: 0.85rem; font-weight: 500; color: var(--text-muted); }
+
+/* Markdown editor */
+.mdHeader { display: flex; align-items: center; justify-content: space-between; }
+.mdTabs { display: flex; gap: 0.25rem; }
+.mdTab {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.25rem 0.7rem; border-radius: var(--radius-sm, 4px);
+  font-size: 0.78rem; font-weight: 500; cursor: pointer;
+  background: none; border: 1px solid var(--border); color: var(--text-muted);
+  transition: background 0.15s, color 0.15s;
+}
+.mdTab:hover { background: var(--surface-2); color: var(--text); }
+.mdTabActive { background: var(--accent); border-color: var(--accent); color: #fff; }
+.mdTabActive:hover { background: var(--accent); color: #fff; }
+
+.mdPreview {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 0.75rem 1rem;
+  min-height: 9rem; font-size: 0.93rem; line-height: 1.7;
+}
+.mdPreview h1,.mdPreview h2,.mdPreview h3 { margin: 0.5rem 0 0.25rem; font-weight: 700; }
+.mdPreview h1 { font-size: 1.2rem; } .mdPreview h2 { font-size: 1.05rem; } .mdPreview h3 { font-size: 0.95rem; }
+.mdPreview p { margin: 0 0 0.5rem; }
+.mdPreview ul,.mdPreview ol { margin: 0 0 0.5rem; padding-left: 1.4rem; }
+.mdPreview li { margin: 0.15rem 0; }
+.mdPreview strong { font-weight: 700; }
+.mdPreview em { font-style: italic; }
+.mdPreview code { background: var(--surface-1); border-radius: 3px; padding: 0.1em 0.35em; font-size: 0.88em; }
+.mdPreview a { color: var(--accent); }
+.mdEmpty { color: var(--text-muted); font-style: italic; margin: 0; }
+.mdHint { font-size: 0.75rem; color: var(--text-muted); margin: 0; }
+
 .textarea {
   background: var(--surface-2); border: 1px solid var(--border);
   border-radius: var(--radius-md); color: var(--text);

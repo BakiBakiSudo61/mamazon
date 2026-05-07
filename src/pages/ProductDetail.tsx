@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Star, ShoppingCart, Shield, ChevronLeft, ChevronRight, Truck, Clock, Lock, User } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { productsApi } from '../api/products';
 import { useCartStore } from '../stores/cartStore';
 import { useAuthStore } from '../stores/authStore';
@@ -153,7 +154,13 @@ export const ProductDetail: React.FC = () => {
 
             <div className={styles.aboutItem}>
               <h3>この商品について</h3>
-              <p className={styles.description}>{product.description}</p>
+              <div className={styles.description}>
+                {product.description ? (
+                  <ReactMarkdown>{product.description}</ReactMarkdown>
+                ) : (
+                  <p>説明なし</p>
+                )}
+              </div>
             </div>
           </div>
 
