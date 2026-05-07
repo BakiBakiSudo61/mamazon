@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Search, User, Package, Store, Menu, X, LogOut, ChevronDown } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { ShoppingCart, Search, User, Package, Store, Menu, X, LogOut, ChevronDown, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore } from '../../stores/cartStore';
 import styles from './Header.module.css';
@@ -9,8 +9,12 @@ export const Header: React.FC = () => {
   const { user, logout } = useAuthStore();
   const totalCount = useCartStore((s) => s.totalCount());
   const navigate = useNavigate();
+  const location = useLocation();
   const [query, setQuery] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const isHome = location.pathname === '/' || location.pathname === '/home';
+  const canGoBack = !isHome;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +31,15 @@ export const Header: React.FC = () => {
       {/* Main Header */}
       <div className={styles.inner}>
         <div className={styles.leftSection}>
+          {canGoBack && (
+            <button
+              className={styles.backBtn}
+              onClick={() => navigate(-1)}
+              aria-label="前のページに戻る"
+            >
+              <ArrowLeft size={20} />
+            </button>
+          )}
           <button className={styles.mobileMenu} onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
