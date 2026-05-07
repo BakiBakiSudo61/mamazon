@@ -5,6 +5,11 @@
   padding: 2rem 1rem;
 }
 
+/* Hide desktop footer on mobile */
+@media (max-width: 640px) {
+  .footer { display: none; }
+}
+
 .inner {
   max-width: 1280px;
   margin: 0 auto;
@@ -41,4 +46,64 @@
   color: var(--text-muted);
   font-size: 0.8rem;
   margin: 0;
+}
+
+/* Mobile bottom navigation bar */
+.mobileNav {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .mobileNav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: #131921;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    height: 60px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+.mobileNavItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: #aaaaaa;
+  text-decoration: none;
+  font-size: 0.65rem;
+  font-weight: 500;
+  transition: color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobileNavItem:hover {
+  color: #ffffff;
+}
+
+.mobileNavActive {
+  color: var(--amazon-orange);
+}
+
+.mobileBadge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  background: var(--amazon-orange);
+  color: #111111;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
 }

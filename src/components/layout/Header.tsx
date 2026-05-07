@@ -28,7 +28,7 @@ export const Header: React.FC = () => {
 
   return (
     <header className={styles.header}>
-      {/* Main Header */}
+      {/* Desktop / Tablet header */}
       <div className={styles.inner}>
         <div className={styles.leftSection}>
           {canGoBack && (
@@ -116,6 +116,33 @@ export const Header: React.FC = () => {
             </Link>
           )}
         </nav>
+      </div>
+
+      {/* Mobile-only search bar */}
+      <div className={styles.mobileSearchBar}>
+        {canGoBack && (
+          <button
+            className={styles.mobileBackBtn}
+            onClick={() => navigate(-1)}
+            aria-label="前のページに戻る"
+          >
+            <ArrowLeft size={20} />
+          </button>
+        )}
+        <form className={styles.mobileSearchForm} onSubmit={handleSearch}>
+          <div className={styles.mobileSearchContainer}>
+            <input
+              className={styles.mobileSearchInput}
+              type="text"
+              placeholder="商品を検索..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <button type="submit" className={styles.mobileSearchBtn}>
+              <Search size={18} color="#333" />
+            </button>
+          </div>
+        </form>
       </div>
     </header>
   );
