@@ -22,7 +22,7 @@ const JP_UNITS_CORRECT: { value: bigint; name: string }[] = [
 /**
  * 価格文字列（または数値）を ¥XXX万YYY形式にフォーマット
  */
-export function formatPrice(price: string | number): string {
+export function formatPrice(price: bigint | string | number): string {
   let val: bigint;
   try {
     val = BigInt(String(price).replace(/[^0-9\-]/g, '') || '0');

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Star, ShoppingCart, Store, Shield, ChevronLeft, ChevronRight, Truck, Clock, Lock } from 'lucide-react';
+import { Star, ShoppingCart, Shield, ChevronLeft, ChevronRight, Truck, Clock, Lock, User } from 'lucide-react';
 import { productsApi } from '../api/products';
 import { useCartStore } from '../stores/cartStore';
 import { useAuthStore } from '../stores/authStore';
