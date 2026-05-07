@@ -1,0 +1,39 @@
+.wrapper { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.label { font-size: 0.85rem; font-weight: 500; color: var(--text-muted); }
+
+.inputWrap { position: relative; }
+
+.icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.input {
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: var(--accent);
+}
+
+.withIcon { padding-left: 2.4rem; }
+
+.hasError { border-color: var(--red) !important; }
+
+.error { font-size: 0.8rem; color: var(--red); }

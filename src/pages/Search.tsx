@@ -1,0 +1,45 @@
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { productsApi } from '../api/products';
+import { ProductCard } from '../components/product/ProductCard';
+import type { Product } from '../types';
+import styles from './Search.module.css';
+
+export const Search: React.FC = () => {
+  const [params] = useSearchParams();
+  const q = params.get('q') ?? '';
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    productsApi.search(q, { limit: 48 })
+      .then((r) => setProducts(r.products))
+      .catch(() => setProducts([]))
+      .finally(() => setLoading(false));
+  }, [q]);
+
+  return (
+    <div className={styles.page}>
+      <div className={styles.inner}>
+        <h1 className={styles.title}>
+          {q ? `「${q}」の検索結果` : 'すべての商品'}
+          {!loading && <span className={styles.count}>{products.length}件</span>}
+        </h1>
+        {loading ? (
+          <div className={styles.grid}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className={styles.skeleton} />
+            ))}
+          </div>
+        ) : products.length === 0 ? (
+          <p className={styles.empty}>「{q}」に一致する商品が見つかりませんでした</p>
+        ) : (
+          <div className={styles.grid}>
+            {products.map((p) => <ProductCard key={p.id} product={p} />)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

@@ -1,0 +1,105 @@
+export interface User {
+  id: string;
+  email: string;
+  display_name: string;
+  avatar_url?: string;
+  address_json?: string;
+  role: 'buyer' | 'seller' | 'both';
+  balance: number;
+  created_at: string;
+}
+
+export interface Store {
+  id: string;
+  owner_user_id: string;
+  store_name: string;
+  description?: string;
+  logo_url?: string;
+  rating: number;
+  sales_count: number;
+  created_at: string;
+}
+
+export interface Product {
+  id: string;
+  store_id: string;
+  name: string;
+  description?: string;
+  price: number;
+  stock: number;
+  category: string;
+  condition: string;
+  rating: number;
+  review_count: number;
+  is_featured: number;
+  images_json?: string;
+  tags_json?: string;
+  created_at: string;
+  store_name?: string;
+  store?: Store;
+}
+
+export interface Order {
+  id: string;
+  buyer_user_id: string;
+  total_amount: number;
+  payment_method: string;
+  shipping_addr: string;
+  status: 'ordered' | 'preparing' | 'shipped' | 'delivered';
+  created_at: string;
+  updated_at: string;
+  items?: OrderItem[];
+}
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  product?: Product;
+}
+
+export interface Review {
+  id: string;
+  product_id: string;
+  user_id: string;
+  order_id: string;
+  rating: number;
+  title?: string;
+  body?: string;
+  helpful: number;
+  created_at: string;
+  user?: User;
+}
+
+export interface CartItem {
+  product_id: string;
+  quantity: number;
+  product?: Product;
+}
+
+export interface Address {
+  zip: string;
+  prefecture: string;
+  city: string;
+  line1: string;
+  line2?: string;
+  name: string;
+  phone: string;
+}
+
+export interface ApiResponse<T> {
+  data?: T;
+  error?: string;
+}
+
+export interface ProductsQuery {
+  page?: number;
+  limit?: number;
+  category?: string;
+  q?: string;
+  sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
+  min_price?: number;
+  max_price?: number;
+}

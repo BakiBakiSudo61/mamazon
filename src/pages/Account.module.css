@@ -1,0 +1,64 @@
+.page { min-height: 100vh; }
+.inner { max-width: 700px; margin: 0 auto; padding: 2rem 1rem 3rem; display: flex; flex-direction: column; gap: 1.5rem; }
+.title { font-size: 1.5rem; font-weight: 700; margin: 0; }
+
+.profileCard {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+.avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.avatarPlaceholder {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: var(--surface-3);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); flex-shrink: 0;
+}
+
+.profileInfo { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
+
+.nameRow { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.name { font-size: 1.2rem; font-weight: 700; margin: 0; }
+.editBtn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); display: flex; align-items: center; padding: 0.2rem;
+  border-radius: var(--radius-sm);
+}
+.editBtn:hover { color: var(--accent); background: var(--surface-2); }
+.nameInput { max-width: 200px; }
+
+.email { color: var(--text-muted); font-size: 0.88rem; margin: 0; }
+
+.statCards { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 480px) { .statCards { grid-template-columns: 1fr; } }
+
+.statCard {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  gap: 0.85rem;
+  align-items: center;
+}
+
+.statIcon { color: var(--accent); flex-shrink: 0; }
+.statLabel { font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.2rem; }
+.statValue { font-size: 1.1rem; font-weight: 700; margin: 0; }
+
+.sellerCta {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.sellerCta h3 { margin: 0; font-size: 1rem; }
+.sellerCta p { margin: 0; font-size: 0.88rem; color: var(--text-muted); }

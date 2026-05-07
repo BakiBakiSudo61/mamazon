@@ -1,0 +1,38 @@
+name = "mamazon-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+[vars]
+ALLOWED_ORIGINS = "https://mamazon.pages.dev,http://localhost:5173"
+COOKIE_DOMAIN = "mamazon.pages.dev"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "arcademart"
+database_id = "091324da-54ab-4f2b-ab57-9cc927cc1aff"
+
+# KV Namespaces
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "864f81c45a484848a07e1f4af53f4f78"
+
+[[kv_namespaces]]
+binding = "CARTS"
+id = "3f1cd279e8dd4883af672b9af8866178"
+
+# R2 Bucket
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "arcademart-images"
+
+# Set secrets via:
+#   npx wrangler secret put GOOGLE_CLIENT_ID
+
+[dev]
+port = 8787
+local_protocol = "http"
+
+[[routes]]
+pattern = "mamazon-api.mamazon.workers.dev/*"
+zone_name = "mamazon.pages.dev"

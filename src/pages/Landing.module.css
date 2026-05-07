@@ -1,0 +1,125 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.hero {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  overflow: hidden;
+  background: radial-gradient(ellipse at center, #1a1a3e 0%, #0d0d1a 70%);
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--accent);
+}
+
+.logo h1 {
+  font-size: 3rem;
+  font-weight: 900;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.tagline {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.googleBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #fff;
+  color: #333;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.8rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.googleBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+.googleBtn:active { transform: scale(0.97); }
+
+.bgBlur1 {
+  position: absolute;
+  top: -20%;
+  left: -10%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(255,200,0,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.bgBlur2 {
+  position: absolute;
+  bottom: -20%;
+  right: -10%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(90,150,255,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  padding: 3rem 2rem;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.featureCard {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  color: var(--accent);
+}
+
+.featureCard h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.featureCard p {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}

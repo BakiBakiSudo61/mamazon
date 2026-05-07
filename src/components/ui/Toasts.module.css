@@ -1,0 +1,45 @@
+.container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  z-index: 9999;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  min-width: 260px;
+  max-width: 380px;
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(30px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+.success .icon { color: #00c864; }
+.error   .icon { color: var(--red); }
+.info    .icon { color: #5a96ff; }
+
+.message { flex: 1; font-size: 0.88rem; }
+
+.close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+.close:hover { color: var(--text); }

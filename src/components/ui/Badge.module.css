@@ -1,0 +1,12 @@
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.default { background: var(--surface-3); color: var(--text-muted); }
+.success { background: rgba(0,200,100,0.15); color: #00c864; }
+.warning { background: rgba(255,180,0,0.15); color: #ffb400; }
+.danger  { background: rgba(220,50,50,0.15); color: var(--red); }
+.info    { background: rgba(90,150,255,0.15); color: #5a96ff; }

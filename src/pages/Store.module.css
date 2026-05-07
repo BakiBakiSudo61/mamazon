@@ -1,0 +1,33 @@
+.page { min-height: 100vh; }
+.loading { display: flex; align-items: center; justify-content: center; min-height: 40vh; color: var(--text-muted); }
+
+.header {
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+  padding: 2rem 1rem;
+}
+
+.headerInner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.logo { width: 72px; height: 72px; border-radius: var(--radius-md); object-fit: cover; flex-shrink: 0; }
+.logoPlaceholder {
+  width: 72px; height: 72px; border-radius: var(--radius-md);
+  background: var(--surface-2); display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); flex-shrink: 0;
+}
+
+.storeName { font-size: 1.5rem; font-weight: 700; margin: 0 0 0.4rem; }
+.meta { display: flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; color: var(--text-muted); }
+.dot { color: var(--border); }
+.desc { color: var(--text-muted); font-size: 0.88rem; margin: 0.5rem 0 0; max-width: 500px; }
+
+.inner { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 3rem; }
+.sectionTitle { font-size: 1.1rem; font-weight: 700; margin: 0 0 1.25rem; }
+.empty { color: var(--text-muted); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.25rem; }

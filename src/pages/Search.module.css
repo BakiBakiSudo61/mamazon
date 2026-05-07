@@ -1,0 +1,8 @@
+.page { min-height: 100vh; }
+.inner { max-width: 1280px; margin: 0 auto; padding: 2rem 1rem 3rem; display: flex; flex-direction: column; gap: 1.5rem; }
+.title { font-size: 1.4rem; font-weight: 700; margin: 0; display: flex; align-items: baseline; gap: 0.75rem; }
+.count { font-size: 0.9rem; color: var(--text-muted); font-weight: 400; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.25rem; }
+.skeleton { aspect-ratio: 3/4; background: var(--surface-2); border-radius: var(--radius-lg); animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+.empty { color: var(--text-muted); padding: 3rem 0; }
