@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Search, User, Package, Store, Menu, X, LogOut } from 'lucide-react';
+import { ShoppingCart, Search, User, Package, Store, Menu, X, LogOut, ChevronDown, Zap } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore } from '../../stores/cartStore';
 import styles from './Header.module.css';
@@ -24,44 +24,47 @@ export const Header: React.FC = () => {
 
   return (
     <header className={styles.header}>
+      {/* Main Header */}
       <div className={styles.inner}>
-        {/* Logo */}
-        <Link to="/home" className={styles.logo}>
-          <Package size={24} />
-          <span>Mamazon</span>
-        </Link>
+        <div className={styles.leftSection}>
+          <button className={styles.mobileMenu} onClick={() => setMenuOpen(!menuOpen)}>
+            {menuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          <Link to="/home" className={styles.logo}>
+            <Zap size={28} className={styles.logoIcon} />
+            <span className={styles.logoText}>MAMAZON<span className={styles.logoPrime}>NEO</span></span>
+          </Link>
+        </div>
 
-        {/* Search */}
         <form className={styles.searchForm} onSubmit={handleSearch}>
-          <Search size={16} className={styles.searchIcon} />
-          <input
-            className={styles.searchInput}
-            type="text"
-            placeholder="商品を検索..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <button type="submit" className={styles.searchBtn}>検索</button>
+          <div className={styles.searchContainer}>
+            <select className={styles.searchCategory}>
+              <option value="all">すべて</option>
+              <option value="electronics">電子機器</option>
+              <option value="clothing">衣類</option>
+            </select>
+            <input
+              className={styles.searchInput}
+              type="text"
+              placeholder="近未来のアイテムを検索..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <button type="submit" className={styles.searchBtn}>
+              <Search size={18} />
+            </button>
+          </div>
         </form>
 
-        {/* Nav */}
         <nav className={styles.nav}>
           {user ? (
             <>
-              <Link to="/cart" className={styles.cartBtn}>
-                <ShoppingCart size={20} />
-                {totalCount > 0 && (
-                  <span className={styles.cartBadge}>{totalCount}</span>
-                )}
-              </Link>
               <div className={styles.userMenu}>
                 <button className={styles.userBtn} onClick={() => setMenuOpen(!menuOpen)}>
-                  {user.avatar_url ? (
-                    <img src={user.avatar_url} alt={user.display_name} className={styles.avatar} />
-                  ) : (
-                    <User size={20} />
-                  )}
-                  <span className={styles.userName}>{user.display_name}</span>
+                  <div className={styles.userInfo}>
+                    <span className={styles.greeting}>こんにちは, {user.display_name}さん</span>
+                    <span className={styles.accountText}>アカウント＆リスト <ChevronDown size={12}/></span>
+                  </div>
                 </button>
                 {menuOpen && (
                   <div className={styles.dropdown} onClick={() => setMenuOpen(false)}>
@@ -83,20 +86,44 @@ export const Header: React.FC = () => {
                   </div>
                 )}
               </div>
+              <Link to="/orders" className={styles.returnsBtn}>
+                <span className={styles.greeting}>返品もこちら</span>
+                <span className={styles.accountText}>注文履歴</span>
+              </Link>
+              <Link to="/cart" className={styles.cartBtn}>
+                <div className={styles.cartIconWrapper}>
+                  <ShoppingCart size={28} />
+                  {totalCount > 0 && <span className={styles.cartBadge}>{totalCount}</span>}
+                </div>
+                <span className={styles.cartText}>カート</span>
+              </Link>
             </>
           ) : (
-            <Link to="/" className={styles.loginBtn}>ログイン</Link>
+            <Link to="/" className={styles.loginBtn}>
+              <span className={styles.loginBtnText}>ログイン / 登録</span>
+              <div className={styles.loginGlow}></div>
+            </Link>
           )}
         </nav>
+      </div>
 
-        {/* Mobile menu toggle */}
-        <button
-          className={styles.mobileMenu}
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="メニュー"
-        >
-          {menuOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
+      {/* Sub Header */}
+      <div className={styles.subHeader}>
+        <div className={styles.subInner}>
+          <button className={styles.allBtn}>
+            <Menu size={16} /> すべて
+          </button>
+          <div className={styles.subLinks}>
+            <Link to="/home" className={styles.subLink}>タイムセール</Link>
+            <Link to="/home" className={styles.subLink}>ヘルプ</Link>
+            <Link to="/home" className={styles.subLink}>Mamazonベーシック</Link>
+            <Link to="/home" className={styles.subLink}>ギフト券</Link>
+            <Link to="/home" className={styles.subLink}>閲覧履歴</Link>
+          </div>
+          <div className={styles.subRight}>
+            <span className={styles.primeLink}>Prime Neoを始める</span>
+          </div>
+        </div>
       </div>
     </header>
   );
