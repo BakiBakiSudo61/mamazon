@@ -23,9 +23,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({ mode }) => {
   const navigate = useNavigate();
   const addToast = useUIStore((s) => s.addToast);
   const [submitting, setSubmitting] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingCount, setUploadingCount] = useState(0);
   const [images, setImages] = useState<string[]>([]);
   const [descTab, setDescTab] = useState<'write' | 'preview'>('write');
+  const [inputKey, setInputKey] = useState(0);
   const [form, setForm] = useState<Partial<Product>>({
     name: '', description: '', price: '',  stock: 1,
     category: '電子機器', condition: 'new', is_featured: 0,
@@ -51,17 +52,31 @@ export const ProductForm: React.FC<ProductFormProps> = ({ mode }) => {
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const res = await sellerApi.uploadImage(file);
-      setImages((imgs) => [...imgs, res.url]);
-    } catch {
-      addToast({ type: 'error', message: '画像のアップロードに失敗しました' });
-    } finally {
-      setUploading(false);
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+
+    // 残り枠数を確認
+    const remaining = 5 - images.length;
+    const targets = files.slice(0, remaining);
+    if (targets.length === 0) return;
+
+    setUploadingCount(targets.length);
+    // input をリセット（同じファイルを再選択できるように）
+    setInputKey((k) => k + 1);
+
+    const results = await Promise.allSettled(
+      targets.map((file) => sellerApi.uploadImage(file))
+    );
+
+    const urls: string[] = [];
+    let errorCount = 0;
+    for (const r of results) {
+      if (r.status === 'fulfilled') urls.push(r.value.url);
+      else errorCount++;
     }
+    if (urls.length) setImages((imgs) => [...imgs, ...urls]);
+    if (errorCount > 0) addToast({ type: 'error', message: `${errorCount}枚のアップロードに失敗しました` });
+    setUploadingCount(0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,10 +107,13 @@ export const ProductForm: React.FC<ProductFormProps> = ({ mode }) => {
         <form className={styles.form} onSubmit={handleSubmit}>
           {/* Images */}
           <div className={styles.section}>
-            <h3>商品画像</h3>
+            <div className={styles.imageSectionHeader}>
+              <h3>商品画像</h3>
+              <span className={styles.imageCount}>{images.length} / 5枚</span>
+            </div>
             <div className={styles.imageGrid}>
               {images.map((url, i) => (
-                <div key={i} className={styles.imageItem}>
+                <div key={url} className={styles.imageItem}>
                   <img src={url} alt="" />
                   <button
                     type="button"
@@ -106,26 +124,28 @@ export const ProductForm: React.FC<ProductFormProps> = ({ mode }) => {
                   </button>
                 </div>
               ))}
-              {images.length < 5 && (
+              {Array.from({ length: uploadingCount }).map((_, i) => (
+                <div key={`uploading-${i}`} className={[styles.imageItem, styles.imageItemUploading].join(' ')}>
+                  <span className={styles.spinner} />
+                </div>
+              ))}
+              {images.length + uploadingCount < 5 && (
                 <label className={styles.uploadBtn}>
-                  {uploading ? (
-                    <span className={styles.spinner} />
-                  ) : (
-                    <>
-                      <Upload size={20} />
-                      <span>追加</span>
-                    </>
-                  )}
+                  <Upload size={20} />
+                  <span>追加</span>
                   <input
+                    key={inputKey}
                     type="file"
                     accept="image/*"
+                    multiple
                     style={{ display: 'none' }}
                     onChange={handleImageUpload}
-                    disabled={uploading}
+                    disabled={uploadingCount > 0}
                   />
                 </label>
               )}
             </div>
+            <p className={styles.imageHint}>最大5枚・JPEG / PNG / WebP・各5MB以下（複数同時選択可）</p>
           </div>
 
           {/* Basic Info */}
