@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Package, ChevronRight } from 'lucide-react';
 import { ordersApi } from '../api/orders';
 import { Badge } from '../components/ui/Badge';
+import { formatPrice } from '../utils/price';
 import type { Order } from '../types';
 import styles from './Orders.module.css';
 
@@ -50,7 +51,7 @@ export const Orders: React.FC = () => {
                   </Badge>
                 </div>
                 <div className={styles.cardBody}>
-                  <span className={styles.amount}>¥{o.total_amount.toLocaleString()}</span>
+                  <span className={styles.amount}>{formatPrice(o.total_amount)}</span>
                   {o.items && (
                     <span className={styles.itemCount}>{o.items.length}点</span>
                   )}

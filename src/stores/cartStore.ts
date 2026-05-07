@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { cartApi } from '../api/orders';
 import type { CartItem } from '../types';
+import { multiplyPrice } from '../utils/price';
 
 interface CartState {
   items: CartItem[];
@@ -11,7 +12,7 @@ interface CartState {
   removeItem: (product_id: string) => Promise<void>;
   clearCart: () => Promise<void>;
   totalCount: () => number;
-  totalPrice: () => number;
+  totalPrice: () => bigint;
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
@@ -58,7 +59,7 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   totalPrice: () =>
     get().items.reduce(
-      (sum, i) => sum + i.quantity * (i.product?.price ?? 0),
-      0
+      (sum, i) => sum + multiplyPrice(i.product?.price ?? '0', i.quantity),
+      0n
     ),
 }));

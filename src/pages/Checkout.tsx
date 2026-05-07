@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { formatPrice, multiplyPrice } from '../utils/price';
 import type { Address } from '../types';
 import styles from './Checkout.module.css';
 
@@ -107,12 +108,12 @@ export const Checkout: React.FC = () => {
                   <div key={it.product_id} className={styles.orderItem}>
                     <span>{it.product?.name ?? it.product_id}</span>
                     <span>×{it.quantity}</span>
-                    <span>¥{((it.product?.price ?? 0) * it.quantity).toLocaleString()}</span>
+                    <span>{formatPrice(multiplyPrice(it.product?.price ?? '0', it.quantity))}</span>
                   </div>
                 ))}
               </div>
               <Button size="lg" fullWidth onClick={handleOrder} loading={submitting}>
-                注文を確定する（¥{subtotal.toLocaleString()}）
+                注文を確定する（{formatPrice(subtotal)}）
               </Button>
             </div>
           )}
@@ -123,13 +124,13 @@ export const Checkout: React.FC = () => {
             {items.map((it) => (
               <div key={it.product_id} className={styles.summaryItem}>
                 <span className={styles.summaryName}>{it.product?.name ?? it.product_id}</span>
-                <span>¥{((it.product?.price ?? 0) * it.quantity).toLocaleString()}</span>
+                <span>{formatPrice(multiplyPrice(it.product?.price ?? '0', it.quantity))}</span>
               </div>
             ))}
             <hr className={styles.divider} />
             <div className={styles.totalRow}>
               <span>合計</span>
-              <span className={styles.totalAmt}>¥{subtotal.toLocaleString()}</span>
+              <span className={styles.totalAmt}>{formatPrice(subtotal)}</span>
             </div>
           </div>
         </div>

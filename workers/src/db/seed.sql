@@ -1,6 +1,6 @@
 -- サンプルストア
 INSERT OR IGNORE INTO users (id, email, display_name, avatar_url, role, balance)
-VALUES ('demo-seller-1', 'shop@example.com', 'デモショップ', null, 'seller', 500000);
+VALUES ('demo-seller-1', 'shop@example.com', 'デモショップ', null, 'seller', '100000000000');
 
 INSERT OR IGNORE INTO stores (id, owner_user_id, store_name, description, rating, sales_count)
 VALUES ('store-1', 'demo-seller-1', 'テックショップ東京', '最新の電子機器を取り扱うストアです', 4.5, 128);

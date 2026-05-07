@@ -29,44 +29,47 @@ export async function handleOrders(
     if (!body.items?.length) return json({ error: '商品が選択されていません' }, 400);
 
     // Calculate total and validate stock
-    let total = 0;
+    let total = 0n;
     for (const item of body.items) {
       const product = await env.DB.prepare(
         'SELECT price, stock FROM products WHERE id = ?'
-      ).bind(item.product_id).first<{ price: number; stock: number }>();
+      ).bind(item.product_id).first<{ price: string; stock: number }>();
 
       if (!product) return json({ error: `商品が見つかりません: ${item.product_id}` }, 400);
       if (product.stock < item.quantity) return json({ error: '在庫が不足しています' }, 400);
-      total += product.price * item.quantity;
+      total += BigInt(product.price) * BigInt(item.quantity);
     }
 
     // Check buyer balance
     const buyer = await env.DB.prepare('SELECT balance FROM users WHERE id = ?')
-      .bind(session.userId).first<{ balance: number }>();
-    if (!buyer || buyer.balance < total) {
+      .bind(session.userId).first<{ balance: string }>();
+    if (!buyer || BigInt(buyer.balance) < total) {
       return json({ error: '残高が不足しています' }, 400);
     }
 
     const orderId = `ARC-2026-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 
     // Deduct buyer balance
-    await env.DB.prepare('UPDATE users SET balance = balance - ? WHERE id = ?')
-      .bind(total, session.userId).run();
+    const newBuyerBalance = (BigInt(buyer.balance) - total).toString();
+    await env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?')
+      .bind(newBuyerBalance, session.userId).run();
 
     // Insert order
     await env.DB.prepare(
       `INSERT INTO orders (id, buyer_user_id, total_amount, payment_method, shipping_addr)
        VALUES (?, ?, ?, ?, ?)`
-    ).bind(orderId, session.userId, total, body.payment_method, JSON.stringify(body.shipping_addr)).run();
+    ).bind(orderId, session.userId, total.toString(), body.payment_method, JSON.stringify(body.shipping_addr)).run();
 
     // Insert order items & update stock/sales
     for (const item of body.items) {
       const itemId = crypto.randomUUID();
       const product = await env.DB.prepare(
         'SELECT price, store_id FROM products WHERE id = ?'
-      ).bind(item.product_id).first<{ price: number; store_id: string }>();
+      ).bind(item.product_id).first<{ price: string; store_id: string }>();
 
       if (!product) continue;
+
+      const unitPrice = BigInt(product.price);
 
       await env.DB.prepare(
         `INSERT INTO order_items (id, order_id, product_id, quantity, unit_price)
@@ -77,11 +80,15 @@ export async function handleOrders(
         .bind(item.quantity, item.product_id).run();
 
       // Credit seller
-      const storeOwner = await env.DB.prepare('SELECT owner_user_id FROM stores WHERE id = ?')
+      const storeOwner = await env.DB.prepare('SELECT owner_user_id, s.id as sid FROM stores s WHERE s.id = ?')
         .bind(product.store_id).first<{ owner_user_id: string }>();
       if (storeOwner) {
-        await env.DB.prepare('UPDATE users SET balance = balance + ? WHERE id = ?')
-          .bind(product.price * item.quantity, storeOwner.owner_user_id).run();
+        const sellerRow = await env.DB.prepare('SELECT balance FROM users WHERE id = ?')
+          .bind(storeOwner.owner_user_id).first<{ balance: string }>();
+        const sellerBalance = sellerRow ? BigInt(sellerRow.balance) : 0n;
+        const newSellerBalance = (sellerBalance + unitPrice * BigInt(item.quantity)).toString();
+        await env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?')
+          .bind(newSellerBalance, storeOwner.owner_user_id).run();
         await env.DB.prepare('UPDATE stores SET sales_count = sales_count + 1 WHERE id = ?')
           .bind(product.store_id).run();
       }

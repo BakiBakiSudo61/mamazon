@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_url    TEXT,
   address_json  TEXT,
   role          TEXT DEFAULT 'buyer',
-  balance       INTEGER DEFAULT 100000,
+  balance       TEXT DEFAULT '100000000000',
   created_at    TEXT DEFAULT (datetime('now'))
 );
 
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS products (
   store_id      TEXT NOT NULL REFERENCES stores(id),
   name          TEXT NOT NULL,
   description   TEXT,
-  price         INTEGER NOT NULL,
+  price         TEXT NOT NULL,
   stock         INTEGER DEFAULT 0,
   category      TEXT NOT NULL,
   condition     TEXT DEFAULT 'new',
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE TABLE IF NOT EXISTS orders (
   id              TEXT PRIMARY KEY,
   buyer_user_id   TEXT NOT NULL REFERENCES users(id),
-  total_amount    INTEGER NOT NULL,
+  total_amount    TEXT NOT NULL,
   payment_method  TEXT NOT NULL,
   shipping_addr   TEXT NOT NULL,
   status          TEXT DEFAULT 'ordered',
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   order_id    TEXT NOT NULL REFERENCES orders(id),
   product_id  TEXT NOT NULL REFERENCES products(id),
   quantity    INTEGER NOT NULL,
-  unit_price  INTEGER NOT NULL
+  unit_price  TEXT NOT NULL
 );
 
 -- レビューテーブル

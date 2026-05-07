@@ -6,6 +6,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import type { Product } from '../../types';
+import { isValidPrice } from '../../utils/price';
 import styles from './ProductForm.module.css';
 
 const CATEGORIES = ['電子機器', '衣類', '本', 'スポーツ', 'おもちゃ', 'インテリア', '食品', 'その他'];
@@ -24,7 +25,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ mode }) => {
   const [uploading, setUploading] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [form, setForm] = useState<Partial<Product>>({
-    name: '', description: '', price: 0, stock: 1,
+    name: '', description: '', price: '1', stock: 1,
     category: '電子機器', condition: 'new', is_featured: 0,
   });
 
@@ -166,10 +167,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({ mode }) => {
             <div className={styles.twoCol}>
               <Input
                 label="価格（円）"
-                type="number"
-                min={1}
-                value={form.price ?? 0}
-                onChange={update('price')}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={form.price ?? '1'}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^0-9]/g, '');
+                  if (v === '' || isValidPrice(v)) setForm((f) => ({ ...f, price: v || '1' }));
+                }}
                 required
               />
               <Input

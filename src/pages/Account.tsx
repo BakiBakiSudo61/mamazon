@@ -3,6 +3,7 @@ import { User, Wallet, Store, Edit } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
 import { api } from '../api/client';
+import { formatPrice } from '../utils/price';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
@@ -75,7 +76,7 @@ export const Account: React.FC = () => {
             <Wallet size={24} className={styles.statIcon} />
             <div>
               <p className={styles.statLabel}>Mamazon残高</p>
-              <p className={styles.statValue}>¥{user.balance.toLocaleString()}</p>
+              <p className={styles.statValue}>{formatPrice(user.balance)}</p>
             </div>
           </div>
           <div className={styles.statCard}>

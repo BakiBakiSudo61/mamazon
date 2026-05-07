@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCartStore } from '../stores/cartStore';
 import { Button } from '../components/ui/Button';
+import { formatPrice, multiplyPrice } from '../utils/price';
 import styles from './Cart.module.css';
 
 const PLACEHOLDER = 'https://placehold.co/80x80/1a1a2e/e0e0e0?text=?';
@@ -44,7 +45,7 @@ export const Cart: React.FC = () => {
                       {item.product?.name ?? item.product_id}
                     </Link>
                     <span className={styles.itemCategory}>{item.product?.category}</span>
-                    <span className={styles.itemPrice}>¥{(item.product?.price ?? 0).toLocaleString()}</span>
+                    <span className={styles.itemPrice}>{formatPrice(item.product?.price ?? '0')}</span>
                   </div>
                   <div className={styles.itemControls}>
                     <select
@@ -58,7 +59,7 @@ export const Cart: React.FC = () => {
                       ))}
                     </select>
                     <span className={styles.lineTotal}>
-                      ¥{((item.product?.price ?? 0) * item.quantity).toLocaleString()}
+                      {formatPrice(multiplyPrice(item.product?.price ?? '0', item.quantity))}
                     </span>
                     <button
                       className={styles.removeBtn}

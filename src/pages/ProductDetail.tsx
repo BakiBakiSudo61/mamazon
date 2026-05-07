@@ -8,6 +8,7 @@ import { useUIStore } from '../stores/uiStore';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import type { Product, Review } from '../types';
+import { formatPrice } from '../utils/price';
 import styles from './ProductDetail.module.css';
 
 const PLACEHOLDER = 'https://placehold.co/600x500/1a1a2e/e0e0e0?text=No+Image';
@@ -125,7 +126,7 @@ export const ProductDetail: React.FC = () => {
               <span className={styles.ratingNum}>{product.rating.toFixed(1)}</span>
               <span className={styles.reviewCount}>({product.review_count}件のレビュー)</span>
             </div>
-            <div className={styles.price}>¥{product.price.toLocaleString()}</div>
+            <div className={styles.price}>{formatPrice(product.price)}</div>
 
             {product.store && (
               <Link to={`/store/${product.store_id}`} className={styles.storeLink}>

@@ -6,6 +6,7 @@ import { useCartStore } from '../../stores/cartStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useUIStore } from '../../stores/uiStore';
 import { Button } from '../ui/Button';
+import { formatPrice } from '../../utils/price';
 import styles from './ProductCard.module.css';
 
 interface Props {
@@ -64,7 +65,7 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
         )}
         <div className={styles.footer}>
           <span className={styles.price}>
-            ¥{product.price.toLocaleString()}
+            {formatPrice(product.price)}
           </span>
           <Button
             size="sm"

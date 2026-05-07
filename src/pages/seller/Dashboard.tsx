@@ -6,6 +6,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import type { Product, Store } from '../../types';
+import { formatPrice } from '../../utils/price';
 import styles from './Dashboard.module.css';
 
 export const Dashboard: React.FC = () => {
@@ -109,7 +110,7 @@ export const Dashboard: React.FC = () => {
                       <span className={styles.rowCategory}>{p.category}</span>
                     </div>
                     <div className={styles.rowMeta}>
-                      <span className={styles.rowPrice}>¥{p.price.toLocaleString()}</span>
+                      <span className={styles.rowPrice}>{formatPrice(p.price)}</span>
                       <Badge variant={p.stock > 0 ? 'success' : 'danger'}>
                         在庫{p.stock}
                       </Badge>

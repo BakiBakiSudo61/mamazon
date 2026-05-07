@@ -25,7 +25,7 @@ export interface Product {
   store_id: string;
   name: string;
   description?: string;
-  price: number;
+  price: string;
   stock: number;
   category: string;
   condition: string;
@@ -42,7 +42,7 @@ export interface Product {
 export interface Order {
   id: string;
   buyer_user_id: string;
-  total_amount: number;
+  total_amount: string;
   payment_method: string;
   shipping_addr: string;
   status: 'ordered' | 'preparing' | 'shipped' | 'delivered';
@@ -56,7 +56,7 @@ export interface OrderItem {
   order_id: string;
   product_id: string;
   quantity: number;
-  unit_price: number;
+  unit_price: string;
   product?: Product;
 }
 
@@ -100,6 +100,6 @@ export interface ProductsQuery {
   category?: string;
   q?: string;
   sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
-  min_price?: number;
-  max_price?: number;
+  min_price?: string;
+  max_price?: string;
 }
