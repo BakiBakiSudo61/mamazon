@@ -311,7 +311,7 @@ export const ProductDetail: React.FC = () => {
                 </div>
                 <div className={styles.sellerRow}>
                   <span className={styles.sellerLabel}>販売元</span>
-                  <span className={styles.sellerValue}>{product.store?.store_name || '不明'}</span>
+                  <span className={styles.sellerValue}>{product.store_name || product.store?.store_name || '不明'}</span>
                 </div>
               </div>
 
