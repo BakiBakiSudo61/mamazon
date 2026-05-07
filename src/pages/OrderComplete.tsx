@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { CheckCircle, Package } from 'lucide-react';
 import { ordersApi } from '../api/orders';
+import { formatPrice } from '../utils/price';
 import type { Order } from '../types';
 import styles from './OrderComplete.module.css';
 
@@ -24,7 +25,7 @@ export const OrderComplete: React.FC = () => {
           <div className={styles.summary}>
             <div className={styles.row}>
               <span>合計金額</span>
-              <span className={styles.amount}>¥{order.total_amount.toLocaleString()}</span>
+              <span className={styles.amount}>{formatPrice(order.total_amount)}</span>
             </div>
             <div className={styles.row}>
               <span>ステータス</span>

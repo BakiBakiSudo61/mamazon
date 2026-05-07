@@ -13,6 +13,7 @@ import { Cart } from './pages/Cart';
 import { Checkout } from './pages/Checkout';
 import { OrderComplete } from './pages/OrderComplete';
 import { Orders } from './pages/Orders';
+import { OrderDetail } from './pages/OrderDetail';
 import { Account } from './pages/Account';
 import { Store } from './pages/Store';
 import { SellerRegister } from './pages/seller/SellerRegister';
@@ -62,6 +63,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/checkout/*" element={<Layout><RequireAuth><Checkout /></RequireAuth></Layout>} />
       <Route path="/checkout/complete" element={<Layout><RequireAuth><OrderComplete /></RequireAuth></Layout>} />
       <Route path="/orders" element={<Layout><RequireAuth><Orders /></RequireAuth></Layout>} />
+      <Route path="/orders/:id" element={<Layout><RequireAuth><OrderDetail /></RequireAuth></Layout>} />
       <Route path="/account" element={<Layout><RequireAuth><Account /></RequireAuth></Layout>} />
       <Route path="/seller/register" element={<Layout><RequireAuth><SellerRegister /></RequireAuth></Layout>} />
       <Route path="/seller/dashboard" element={<Layout><RequireSeller><Dashboard /></RequireSeller></Layout>} />

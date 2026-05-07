@@ -52,8 +52,8 @@ export const Orders: React.FC = () => {
                 </div>
                 <div className={styles.cardBody}>
                   <span className={styles.amount}>{formatPrice(o.total_amount)}</span>
-                  {o.items && (
-                    <span className={styles.itemCount}>{o.items.length}点</span>
+                  {(o.item_count != null || o.items) && (
+                    <span className={styles.itemCount}>{o.item_count ?? o.items?.length ?? 0}点</span>
                   )}
                 </div>
                 <Link to={`/orders/${o.id}`} className={styles.detailLink}>

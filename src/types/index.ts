@@ -49,6 +49,7 @@ export interface Order {
   created_at: string;
   updated_at: string;
   items?: OrderItem[];
+  item_count?: number;
 }
 
 export interface OrderItem {
@@ -57,6 +58,8 @@ export interface OrderItem {
   product_id: string;
   quantity: number;
   unit_price: string;
+  name?: string;
+  images_json?: string;
   product?: Product;
 }
 
