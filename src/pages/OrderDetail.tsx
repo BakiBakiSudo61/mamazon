@@ -96,6 +96,7 @@ export const OrderDetail: React.FC = () => {
   }
 
   const items = (order.items ?? []) as unknown as RawOrderItem[];
+  const displayStatus = computeOrderStatus(order.status, order.created_at);
 
   return (
     <div className={styles.page}>
@@ -120,17 +121,17 @@ export const OrderDetail: React.FC = () => {
               })}
             </p>
           </div>
-          <Badge variant={STATUS_VARIANT[order.status] ?? 'default'}>
-            {STATUS_LABEL[order.status] ?? order.status}
+          <Badge variant={STATUS_VARIANT[displayStatus] ?? 'default'}>
+            {STATUS_LABEL[displayStatus] ?? displayStatus}
           </Badge>
         </div>
 
         {/* Status timeline */}
         <div className={styles.timeline}>
           {(['ordered', 'preparing', 'shipped', 'delivered'] as const).map((s, i, arr) => {
-            const statusIndex = order.status === 'returned'
+            const statusIndex = displayStatus === 'returned'
               ? arr.length - 1
-              : arr.indexOf(order.status as typeof s);
+              : arr.indexOf(displayStatus as typeof s);
             const isActive = i <= statusIndex;
             return (
               <React.Fragment key={s}>
@@ -147,7 +148,7 @@ export const OrderDetail: React.FC = () => {
         </div>
 
         {/* Return action */}
-        {order.status === 'delivered' && (
+        {displayStatus === 'delivered' && (
           <div className={styles.returnBox}>
             <div className={styles.returnInfo}>
               <RotateCcw size={16} />
@@ -162,7 +163,7 @@ export const OrderDetail: React.FC = () => {
             </button>
           </div>
         )}
-        {order.status === 'returned' && (
+        {displayStatus === 'returned' && (
           <div className={styles.returnedNotice}>
             <RotateCcw size={16} />
             <span>この注文は返品済みです。購入金額は残高に返金されています。</span>

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Star, ShoppingCart, Shield, ChevronLeft, ChevronRight, Truck, Clock, Lock, User, Edit3, CheckCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { productsApi } from '../api/products';
+import { ordersApi } from '../api/orders';
 import { useCartStore } from '../stores/cartStore';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
@@ -59,12 +60,14 @@ const StarInput: React.FC<{ value: number; onChange: (v: number) => void }> = ({
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [imgIndex, setImgIndex] = useState(0);
   const [qty, setQty] = useState(1);
   const [loading, setLoading] = useState(true);
   const [addingCart, setAddingCart] = useState(false);
+  const [buyingNow, setBuyingNow] = useState(false);
 
   // Review form state
   const [eligibleOrderId, setEligibleOrderId] = useState<string | null>(null);
@@ -122,8 +125,29 @@ export const ProductDetail: React.FC = () => {
 
   const handleBuyNow = async () => {
     if (!user) { addToast({ type: 'info', message: 'ログインが必要です' }); return; }
-    // Simulated buy now logic
-    addToast({ type: 'success', message: '1-Clickで注文を確定しました（仮想）' });
+    if (!product) return;
+    setBuyingNow(true);
+    try {
+      const mockAddress = {
+        zip: '000-0000',
+        prefecture: '東京都',
+        city: '架空区',
+        line1: '架空1-1-1',
+        line2: '',
+        name: user.display_name ?? 'ユーザー',
+        phone: '000-0000-0000',
+      };
+      const order = await ordersApi.create({
+        items: [{ product_id: product.id, quantity: qty }],
+        payment_method: 'mamazon_balance',
+        shipping_addr: mockAddress,
+      });
+      navigate(`/checkout/complete?orderId=${order.id}`);
+    } catch (err: unknown) {
+      addToast({ type: 'error', message: err instanceof Error ? err.message : '注文に失敗しました' });
+    } finally {
+      setBuyingNow(false);
+    }
   };
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
@@ -310,9 +334,10 @@ export const ProductDetail: React.FC = () => {
                   fullWidth
                   className={styles.buyNowBtn}
                   onClick={handleBuyNow}
+                  loading={buyingNow}
                   disabled={product.stock === 0}
                 >
-                  今すぐ買う（仮想）
+                  今すぐ買う
                 </Button>
               </div>
 

@@ -3,15 +3,15 @@ import { Link } from 'react-router-dom';
 import { Package, ChevronRight } from 'lucide-react';
 import { ordersApi } from '../api/orders';
 import { Badge } from '../components/ui/Badge';
-import { formatPrice } from '../utils/price';
+import { formatPrice, computeOrderStatus } from '../utils/price';
 import type { Order } from '../types';
 import styles from './Orders.module.css';
 
 const STATUS_LABEL: Record<string, string> = {
-  ordered: '受付完了', preparing: '準備中', shipped: '発送済み', delivered: '配達完了'
+  ordered: '受付完了', preparing: '準備中', shipped: '発送済み', delivered: '配達完了', returned: '返品済み'
 };
-const STATUS_VARIANT: Record<string, 'info' | 'warning' | 'success' | 'default'> = {
-  ordered: 'info', preparing: 'warning', shipped: 'warning', delivered: 'success'
+const STATUS_VARIANT: Record<string, 'info' | 'warning' | 'success' | 'default' | 'danger'> = {
+  ordered: 'info', preparing: 'warning', shipped: 'warning', delivered: 'success', returned: 'danger'
 };
 
 export const Orders: React.FC = () => {
@@ -46,9 +46,11 @@ export const Orders: React.FC = () => {
                     <span className={styles.orderId}>{o.id}</span>
                     <span className={styles.date}>{new Date(o.created_at).toLocaleDateString('ja-JP')}</span>
                   </div>
-                  <Badge variant={STATUS_VARIANT[o.status] ?? 'default'}>
-                    {STATUS_LABEL[o.status] ?? o.status}
-                  </Badge>
+                  {(() => { const s = computeOrderStatus(o.status, o.created_at); return (
+                    <Badge variant={STATUS_VARIANT[s] ?? 'default'}>
+                      {STATUS_LABEL[s] ?? s}
+                    </Badge>
+                  ); })()}
                 </div>
                 <div className={styles.cardBody}>
                   <span className={styles.amount}>{formatPrice(o.total_amount)}</span>
