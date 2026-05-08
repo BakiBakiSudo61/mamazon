@@ -2,7 +2,7 @@
   min-height: 100vh;
   background: radial-gradient(ellipse at 60% 0%, #1a0a3e 0%, #09090f 60%, #000 100%);
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
   padding-bottom: 4rem;
 }
 
@@ -148,7 +148,9 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  white-space: nowrap;
+  text-align: center;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .dirBtn:hover {
@@ -278,13 +280,60 @@
 
 .mineBtn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.8);
+  transform: translateY(-1px);
 }
 
 .mineBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Mining progress animation */
+.mineProgress {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  text-align: center;
+}
+
+.minePhaseText {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: rgba(255, 215, 0, 0.85);
+  margin-bottom: 0.875rem;
+  letter-spacing: 0.02em;
+}
+
+.mineProgressBar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.mineProgressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #B8860B, #FFD700, #FF8C00);
+  border-radius: 50px;
+  transition: width 0.06s linear;
+  box-shadow: 0 0 10px rgba(255, 165, 0, 0.55);
+}
+
+.mineHash {
+  font-family: 'Courier New', monospace;
+  font-size: 0.72rem;
+  color: rgba(16, 185, 129, 0.55);
+  letter-spacing: 0.12em;
+  animation: hashFlicker 0.12s steps(1) infinite;
+}
+
+@keyframes hashFlicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 .navGrid {

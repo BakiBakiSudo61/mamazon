@@ -271,3 +271,22 @@
 
 .profitUp { color: #34d399; }
 .profitDown { color: #f87171; }
+
+/* Sparkline */
+.sparklineWrapper {
+  margin: 0.4rem 0 0.65rem;
+}
+
+.sparkline {
+  display: block;
+  width: 100%;
+  height: 36px;
+  opacity: 0.9;
+}
+
+.sparklinePlaceholder {
+  height: 36px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  margin: 0.4rem 0 0.65rem;
+}

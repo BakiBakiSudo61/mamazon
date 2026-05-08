@@ -61,45 +61,58 @@
 
 .reelWindow {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.55rem;
   justify-content: center;
   background: #000;
   border-radius: 12px;
-  padding: 0.875rem 1rem;
+  padding: 0.75rem 0.875rem;
   border: 1.5px solid rgba(255, 255, 255, 0.04);
   box-shadow: inset 0 4px 20px rgba(0, 0, 0, 0.9);
   position: relative;
   z-index: 2;
 }
 
-.reel {
-  width: 84px;
-  height: 94px;
+.reelCol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.reelCell {
+  height: 66px;
   background: linear-gradient(180deg, #0c0c20, #16163a);
-  border-radius: 10px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.7);
   overflow: hidden;
+  position: relative;
+}
+
+.paylineCell {
+  border-color: rgba(255, 215, 0, 0.3);
+  background: linear-gradient(180deg, #12102e, #1e1848);
+  box-shadow: inset 0 0 12px rgba(255, 215, 0, 0.08);
 }
 
 .reelSymbol {
-  font-size: 2.8rem;
+  font-size: 2.4rem;
   line-height: 1;
   display: block;
-  transition: filter 0.05s;
+  user-select: none;
 }
 
 .reelSpin .reelSymbol {
-  animation: reelBlur 0.12s linear infinite;
+  animation: reelBlur 0.1s linear infinite;
 }
 
 @keyframes reelBlur {
   0%   { transform: translateY(-8px); filter: blur(4px) brightness(1.3); }
-  50%  { transform: translateY(0); filter: blur(0) brightness(1); }
-  100% { transform: translateY(8px); filter: blur(4px) brightness(1.3); }
+  50%  { transform: translateY(0);    filter: blur(0)   brightness(1); }
+  100% { transform: translateY(8px);  filter: blur(4px) brightness(1.3); }
 }
 
 .paylineLine {
@@ -125,6 +138,45 @@
   border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #888, #333);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* === Stop buttons === */
+.stopBtns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.stopBtn {
+  padding: 0.5rem 0.25rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+  letter-spacing: 0.02em;
+}
+
+.stopBtn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.7);
+  transform: translateY(-1px);
+}
+
+.stopBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.stopBtnDone {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  color: #34d399 !important;
 }
 
 /* === Result === */

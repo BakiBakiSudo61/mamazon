@@ -17,15 +17,51 @@ interface PortfolioItem {
   avg_buy_price: number;
 }
 
+function Sparkline({ data, isUp }: { data: number[]; isUp: boolean }) {
+  if (data.length < 2) return <div className={styles.sparklinePlaceholder} />;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const pts = data
+    .map((v, i) => {
+      const x = (i / (data.length - 1)) * 100;
+      const y = 30 - 2 - ((v - min) / range) * 26;
+      return `${x},${y}`;
+    })
+    .join(' ');
+  const color = isUp ? '#34d399' : '#f87171';
+  return (
+    <svg viewBox="0 0 100 30" preserveAspectRatio="none" className={styles.sparkline}>
+      <defs>
+        <linearGradient id={`sg-${isUp}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polyline
+        points={pts}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
 export function Market() {
   const { fetchMe } = useAuthStore();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [prevPrices, setPrevPrices] = useState<Record<string, number>>({});
+  const [priceHistory, setPriceHistory] = useState<Record<string, number[]>>({});
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [tradeAmounts, setTradeAmounts] = useState<Record<string, number>>({});
   const [message, setMessage] = useState('');
   const prevPricesRef = useRef<Record<string, number>>({});
+  const priceHistoryRef = useRef<Record<string, number[]>>({});
 
   useEffect(() => {
     const init = async () => {
@@ -45,6 +81,13 @@ export function Market() {
     const fetchPrices = async () => {
       try {
         const p = await api.get<Record<string, number>>('/finance/market/prices');
+        // track history
+        const newHist = { ...priceHistoryRef.current };
+        Object.entries(p).forEach(([id, price]) => {
+          newHist[id] = [...(newHist[id] || []).slice(-39), price];
+        });
+        priceHistoryRef.current = newHist;
+        setPriceHistory({ ...newHist });
         setPrevPrices({ ...prevPricesRef.current });
         prevPricesRef.current = p;
         setPrices(p);
@@ -125,6 +168,10 @@ export function Market() {
                 </div>
               </div>
 
+              <div className={styles.sparklineWrapper}>
+                <Sparkline data={priceHistory[asset.id] || []} isUp={isUp} />
+              </div>
+
               <div className={styles.tradeRow}>
                 <input
                   type="number"
@@ -155,9 +202,9 @@ export function Market() {
       </div>
 
       <div className={styles.portfolio}>
-        <h3 className={styles.portfolioTitle}>💼 ポートフォリオ</h3>
+        <h3 className={styles.portfolioTitle}>💼 保有資産</h3>
         {portfolio.length === 0 ? (
-          <p className={styles.emptyNote}>まだアセットを保有していません</p>
+          <p className={styles.emptyNote}>まだアセットを保有していません。買ってみましょう！</p>
         ) : (
           <div className={styles.portfolioList}>
             {portfolio.map(p => {

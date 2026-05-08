@@ -14,6 +14,9 @@ export function FinancePage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
   const [miningLoading, setMiningLoading] = useState(false);
+  const [miningPhase, setMiningPhase] = useState('');
+  const [miningProgress, setMiningProgress] = useState(0);
+  const [mineHash, setMineHash] = useState('');
 
   if (!user) return null;
 
@@ -46,16 +49,57 @@ export function FinancePage() {
 
   const handleMine = async () => {
     setMiningLoading(true);
+    setMiningProgress(0);
     setMsg('');
+
+    const PHASES = ['⛏️ ハッシュを計算中...', '🔍 ブロックを解析中...', '💻 フルノードに接続中...', '💪 最終検証中...'];
+    let phaseIdx = 0;
+    setMiningPhase(PHASES[0]);
+
+    const phaseTimer = setInterval(() => {
+      phaseIdx = Math.min(phaseIdx + 1, PHASES.length - 1);
+      setMiningPhase(PHASES[phaseIdx]);
+    }, 750);
+
+    const hashTimer = setInterval(() => {
+      setMineHash(Math.random().toString(16).slice(2, 18).toUpperCase());
+    }, 120);
+
+    let prog = 0;
+    const progTimer = setInterval(() => {
+      prog = Math.min(prog + 100 / (3000 / 60), 94);
+      setMiningProgress(prog);
+    }, 60);
+
+    const minDelay = new Promise<void>(r => setTimeout(r, 3000));
+
     try {
-      const res = await api.post<{ minedAmount: number }>('/finance/mine', {});
-      setMsg(`⛏️ マイニング成功！ ¥${res.minedAmount.toLocaleString()} 獲得！`);
+      const [res] = await Promise.all([
+        api.post<{ minedAmount: number }>('/finance/mine', {}),
+        minDelay,
+      ]);
+      clearInterval(phaseTimer);
+      clearInterval(hashTimer);
+      clearInterval(progTimer);
+      setMiningProgress(100);
+      setMineHash('');
+      setMiningPhase('✨ 成功！');
       await fetchMe();
-      setTimeout(() => setMsg(''), 4000);
-    } catch (err: any) {
-      setMsg(`❌ ${err.message || 'エラーが発生しました'}`);
-    } finally {
+      setTimeout(() => {
+        setMiningLoading(false);
+        setMiningPhase('');
+        setMiningProgress(0);
+        setMsg(`⛏️ マイニング成功！ ¥${res.minedAmount.toLocaleString()} 獲得！`);
+        setTimeout(() => setMsg(''), 4000);
+      }, 600);
+    } catch (err: unknown) {
+      clearInterval(phaseTimer);
+      clearInterval(hashTimer);
+      clearInterval(progTimer);
       setMiningLoading(false);
+      setMiningPhase('');
+      setMiningProgress(0);
+      setMsg(`❌ ${err instanceof Error ? err.message : 'エラーが発生しました'}`);
     }
   };
 
@@ -136,10 +180,25 @@ export function FinancePage() {
 
         {/* Mining */}
         <div className={styles.mineSection}>
-          <button className={styles.mineBtn} onClick={handleMine} disabled={miningLoading}>
-            {miningLoading ? <Loader size={18} /> : <Pickaxe size={18} />}
-            マイニング（無料で¥100〜¥500獲得）
-          </button>
+          {miningLoading ? (
+            <div className={styles.mineProgress}>
+              <div className={styles.minePhaseText}>{miningPhase}</div>
+              <div className={styles.mineProgressBar}>
+                <div
+                  className={styles.mineProgressFill}
+                  style={{ width: `${miningProgress}%` }}
+                />
+              </div>
+              {mineHash && (
+                <div className={styles.mineHash}>{mineHash}</div>
+              )}
+            </div>
+          ) : (
+            <button className={styles.mineBtn} onClick={handleMine}>
+              <Pickaxe size={18} />
+              マイニング（無料で¥100〜¥500獲得）
+            </button>
+          )}
         </div>
 
         {/* Navigation cards */}

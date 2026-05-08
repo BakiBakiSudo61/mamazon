@@ -15,6 +15,7 @@ export const Header: React.FC = () => {
 
   const isHome = location.pathname === '/' || location.pathname === '/home';
   const canGoBack = !isHome;
+  const isFinance = location.pathname.startsWith('/finance');
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +26,17 @@ export const Header: React.FC = () => {
     await logout();
     navigate('/');
   };
+
+  if (isFinance) {
+    return (
+      <header className={styles.headerFinance}>
+        <button onClick={() => navigate(-1)} className={styles.financeBackBtn}>
+          <ArrowLeft size={18} />
+          <span>戻る</span>
+        </button>
+      </header>
+    );
+  }
 
   return (
     <header className={styles.header}>
