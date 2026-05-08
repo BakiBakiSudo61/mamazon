@@ -40,6 +40,7 @@
 .desc a { color: inherit; text-decoration: underline; }
 .desc strong { font-weight: 700; }
 .desc em { font-style: italic; }
+.desc del { text-decoration: line-through; }
 .desc ul, .desc ol { padding-left: 1.4em; margin: 0.3em 0; }
 .desc li { margin: 0.15em 0; }
 .desc h1, .desc h2, .desc h3 { font-size: 1em; font-weight: 700; margin: 0.5em 0 0.2em; }

@@ -118,17 +118,68 @@ export const Header: React.FC = () => {
         </nav>
       </div>
 
+      {/* Mobile brand bar (≤640px) */}
+      <div className={styles.mobileBrand}>
+        <div className={styles.mobileBrandLeft}>
+          {canGoBack && (
+            <button
+              className={styles.mobileNavBtn}
+              onClick={() => navigate(-1)}
+              aria-label="前のページに戻る"
+            >
+              <ArrowLeft size={20} />
+            </button>
+          )}
+          <Link to="/home" className={styles.logo}>
+            <span className={styles.logoText}>Mamazon</span>
+          </Link>
+        </div>
+        <div className={styles.mobileBrandRight}>
+          {user ? (
+            <div className={styles.mobileUserMenu}>
+              <button
+                className={styles.mobileNavBtn}
+                onClick={() => setMenuOpen(!menuOpen)}
+                aria-label="メニュー"
+              >
+                <User size={22} />
+              </button>
+              {menuOpen && (
+                <div className={styles.dropdown} onClick={() => setMenuOpen(false)}>
+                  <Link to="/orders" className={styles.dropdownItem}>
+                    <Package size={15} /> 注文履歴
+                  </Link>
+                  <Link to="/account" className={styles.dropdownItem}>
+                    <User size={15} /> アカウント
+                  </Link>
+                  {(user.role === 'seller' || user.role === 'both') && (
+                    <Link to="/seller/dashboard" className={styles.dropdownItem}>
+                      <Store size={15} /> 出品者ダッシュボード
+                    </Link>
+                  )}
+                  <hr className={styles.divider} />
+                  <button className={styles.dropdownItem} onClick={handleLogout}>
+                    <LogOut size={15} /> ログアウト
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link to="/" className={styles.loginBtn}>
+              <span className={styles.loginBtnText}>ログイン</span>
+            </Link>
+          )}
+          <Link to="/cart" className={styles.mobileCartLink}>
+            <div className={styles.cartIconWrapper}>
+              <ShoppingCart size={24} />
+              {totalCount > 0 && <span className={styles.cartBadge}>{totalCount}</span>}
+            </div>
+          </Link>
+        </div>
+      </div>
+
       {/* Mobile-only search bar */}
       <div className={styles.mobileSearchBar}>
-        {canGoBack && (
-          <button
-            className={styles.mobileBackBtn}
-            onClick={() => navigate(-1)}
-            aria-label="前のページに戻る"
-          >
-            <ArrowLeft size={20} />
-          </button>
-        )}
         <form className={styles.mobileSearchForm} onSubmit={handleSearch}>
           <div className={styles.mobileSearchContainer}>
             <input

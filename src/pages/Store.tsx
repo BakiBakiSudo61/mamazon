@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Star, Package } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { sellerApi } from '../api/seller';
 import { ProductCard } from '../components/product/ProductCard';
 import type { Store as StoreType, Product } from '../types';
@@ -71,7 +72,7 @@ export const Store: React.FC = () => {
                 className={styles.desc}
                 style={fg ? { color: `${fg}cc` } : undefined}
               >
-                <ReactMarkdown>{store.description}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{store.description}</ReactMarkdown>
               </div>
             )}
           </div>

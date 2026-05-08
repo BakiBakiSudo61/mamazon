@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Star, ShoppingCart, Shield, ChevronLeft, ChevronRight, Truck, Clock, Lock, User, Edit3, CheckCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { productsApi } from '../api/products';
 import { ordersApi } from '../api/orders';
 import { useCartStore } from '../stores/cartStore';
@@ -268,7 +269,7 @@ export const ProductDetail: React.FC = () => {
               <h3>この商品について</h3>
               <div className={styles.description}>
                 {product.description ? (
-                  <ReactMarkdown>{product.description}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{product.description}</ReactMarkdown>
                 ) : (
                   <p>説明なし</p>
                 )}

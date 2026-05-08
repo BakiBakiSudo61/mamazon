@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Upload, X, Eye, Edit3 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { sellerApi } from '../../api/seller';
 import { useUIStore } from '../../stores/uiStore';
 import { Button } from '../../components/ui/Button';
@@ -183,7 +184,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ mode }) => {
               ) : (
                 <div className={styles.mdPreview}>
                   {form.description ? (
-                    <ReactMarkdown>{form.description}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{form.description}</ReactMarkdown>
                   ) : (
                     <p className={styles.mdEmpty}>説明がありません</p>
                   )}

@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Package, ChevronLeft, ExternalLink, Truck, RotateCcw } from 'lucide-react';
 import { ordersApi } from '../api/orders';
 import { useUIStore } from '../stores/uiStore';
+import { useAuthStore } from '../stores/authStore';
 import { Badge } from '../components/ui/Badge';
 import { formatPrice, multiplyPrice, computeOrderStatus } from '../utils/price';
 import type { Order, OrderItem } from '../types';
@@ -32,6 +33,7 @@ export const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const addToast = useUIStore((s) => s.addToast);
+  const fetchMe = useAuthStore((s) => s.fetchMe);
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -64,6 +66,7 @@ export const OrderDetail: React.FC = () => {
     try {
       const updated = await ordersApi.returnOrder(order.id);
       setOrder(updated);
+      await fetchMe();
       addToast({ type: 'success', message: '返品が完了しました。残高に返金されました。' });
     } catch (err: unknown) {
       addToast({ type: 'error', message: err instanceof Error ? err.message : '返品に失敗しました' });

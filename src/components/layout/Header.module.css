@@ -293,6 +293,64 @@
   .inner { display: none; }
 }
 
+/* Mobile brand bar */
+.mobileBrand {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .mobileBrand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0.75rem;
+    background: #131921;
+    min-height: 52px;
+  }
+}
+
+.mobileBrandLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.mobileBrandRight {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.mobileNavBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0.4rem;
+  transition: border-color 0.15s;
+  flex-shrink: 0;
+}
+.mobileNavBtn:hover { border-color: #ffffff; }
+
+.mobileUserMenu {
+  position: relative;
+}
+
+.mobileCartLink {
+  display: flex;
+  align-items: center;
+  color: #ffffff;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  text-decoration: none;
+}
+.mobileCartLink:hover { border-color: #ffffff; }
+
 /* Mobile-only search bar */
 .mobileSearchBar {
   display: none;

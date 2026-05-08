@@ -41,6 +41,13 @@
 .rowPrice { font-weight: 700; font-size: 0.95rem; color: var(--accent); }
 .rowActions { display: flex; gap: 0.5rem; flex-shrink: 0; }
 
+@media (max-width: 560px) {
+  .row { flex-wrap: wrap; padding: 0.75rem 1rem; }
+  .rowInfo { flex-basis: calc(100% - 60px); }
+  .rowMeta { flex: 0 0 100%; padding-left: 60px; }
+  .rowActions, .restockForm { flex: 0 0 100%; justify-content: flex-end; padding-left: 60px; }
+}
+
 .restockBtn {
   padding: 0.3rem 0.65rem;
   border-radius: var(--radius-sm);
@@ -157,6 +164,7 @@
 .mdPreview p:last-child { margin-bottom: 0; }
 .mdPreview strong { font-weight: 700; }
 .mdPreview em { font-style: italic; }
+.mdPreview del { text-decoration: line-through; }
 .mdPreview h1, .mdPreview h2, .mdPreview h3 { font-weight: 700; margin: 0.6em 0 0.2em; }
 .mdPreview ul, .mdPreview ol { padding-left: 1.4em; margin: 0.3em 0; }
 .mdPreview a { color: var(--accent); }

@@ -316,6 +316,7 @@
   margin: 0;
   white-space: pre-wrap;
 }
+.description del { text-decoration: line-through; }
 
 /* Buy Box Column */
 .buyBox {

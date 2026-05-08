@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Edit, Trash2, TrendingUp, Package, DollarSign, Palette, Eye, EyeOff, ExternalLink } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { sellerApi } from '../../api/seller';
 import { useUIStore } from '../../stores/uiStore';
 import { Button } from '../../components/ui/Button';
@@ -274,7 +275,7 @@ export const Dashboard: React.FC = () => {
               {previewMd ? (
                 <div className={styles.mdPreview}>
                   {description
-                    ? <ReactMarkdown>{description}</ReactMarkdown>
+                    ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{description}</ReactMarkdown>
                     : <span className={styles.mdEmpty}>説明が入力されていません</span>
                   }
                 </div>
