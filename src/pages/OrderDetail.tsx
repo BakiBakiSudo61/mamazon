@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { Package, ChevronLeft, ExternalLink, Truck } from 'lucide-react';
+import { Package, ChevronLeft, ExternalLink, Truck, RotateCcw } from 'lucide-react';
 import { ordersApi } from '../api/orders';
+import { useUIStore } from '../stores/uiStore';
 import { Badge } from '../components/ui/Badge';
 import { formatPrice, multiplyPrice } from '../utils/price';
 import type { Order, OrderItem } from '../types';
@@ -12,12 +13,14 @@ const STATUS_LABEL: Record<string, string> = {
   preparing: '準備中',
   shipped: '発送済み',
   delivered: '配達完了',
+  returned: '返品済み',
 };
-const STATUS_VARIANT: Record<string, 'info' | 'warning' | 'success' | 'default'> = {
+const STATUS_VARIANT: Record<string, 'info' | 'warning' | 'success' | 'default' | 'danger'> = {
   ordered: 'info',
   preparing: 'warning',
   shipped: 'warning',
   delivered: 'success',
+  returned: 'danger',
 };
 
 interface RawOrderItem extends OrderItem {
@@ -28,9 +31,11 @@ interface RawOrderItem extends OrderItem {
 export const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const addToast = useUIStore((s) => s.addToast);
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [returning, setReturning] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -40,6 +45,21 @@ export const OrderDetail: React.FC = () => {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const handleReturn = async () => {
+    if (!order) return;
+    if (!confirm('この注文を返品しますか？\n購入金額が残高に返金されます。')) return;
+    setReturning(true);
+    try {
+      const updated = await ordersApi.returnOrder(order.id);
+      setOrder(updated);
+      addToast({ type: 'success', message: '返品が完了しました。残高に返金されました。' });
+    } catch (err: unknown) {
+      addToast({ type: 'error', message: err instanceof Error ? err.message : '返品に失敗しました' });
+    } finally {
+      setReturning(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -97,7 +117,9 @@ export const OrderDetail: React.FC = () => {
         {/* Status timeline */}
         <div className={styles.timeline}>
           {(['ordered', 'preparing', 'shipped', 'delivered'] as const).map((s, i, arr) => {
-            const statusIndex = arr.indexOf(order.status as typeof s);
+            const statusIndex = order.status === 'returned'
+              ? arr.length - 1
+              : arr.indexOf(order.status as typeof s);
             const isActive = i <= statusIndex;
             return (
               <React.Fragment key={s}>
@@ -112,6 +134,29 @@ export const OrderDetail: React.FC = () => {
             );
           })}
         </div>
+
+        {/* Return action */}
+        {order.status === 'delivered' && (
+          <div className={styles.returnBox}>
+            <div className={styles.returnInfo}>
+              <RotateCcw size={16} />
+              <span>配達完了から返品できます。返品すると購入金額が残高に返金されます。</span>
+            </div>
+            <button
+              className={styles.returnBtn}
+              onClick={handleReturn}
+              disabled={returning}
+            >
+              {returning ? '処理中...' : '返品する'}
+            </button>
+          </div>
+        )}
+        {order.status === 'returned' && (
+          <div className={styles.returnedNotice}>
+            <RotateCcw size={16} />
+            <span>この注文は返品済みです。購入金額は残高に返金されています。</span>
+          </div>
+        )}
 
         {/* Items */}
         <div className={styles.section}>

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS stores (
   store_name       TEXT NOT NULL,
   description      TEXT,
   logo_url         TEXT,
+  brand_color      TEXT,
   rating           REAL DEFAULT 3.5,
   sales_count      INTEGER DEFAULT 0,
   created_at       TEXT DEFAULT (datetime('now'))

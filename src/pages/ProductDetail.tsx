@@ -220,7 +220,6 @@ export const ProductDetail: React.FC = () => {
             </div>
 
             <div className={styles.priceRow}>
-              <span className={styles.priceLabel}>参考価格:</span>
               <span className={styles.priceValue}>{formatPrice(product.price)}</span>
             </div>
 

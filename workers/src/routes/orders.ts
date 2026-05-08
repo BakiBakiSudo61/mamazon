@@ -125,5 +125,65 @@ export async function handleOrders(
     return json({ orders: rows.results });
   }
 
+  // POST /orders/:id/return
+  const returnMatch = path.match(/^\/orders\/([^/]+)\/return$/);
+  if (returnMatch && request.method === 'POST') {
+    const orderId = returnMatch[1];
+    const order = await env.DB.prepare(
+      'SELECT * FROM orders WHERE id = ? AND buyer_user_id = ?'
+    ).bind(orderId, session.userId).first<{ id: string; status: string; total_amount: string; buyer_user_id: string }>();
+
+    if (!order) return json({ error: '注文が見つかりません' }, 404);
+    if (order.status !== 'delivered') {
+      return json({ error: '配達完了後の注文のみ返品できます' }, 400);
+    }
+
+    const items = await env.DB.prepare(
+      `SELECT oi.product_id, oi.quantity, oi.unit_price, p.store_id
+       FROM order_items oi
+       LEFT JOIN products p ON oi.product_id = p.id
+       WHERE oi.order_id = ?`
+    ).bind(orderId).all<{ product_id: string; quantity: number; unit_price: string; store_id: string }>();
+
+    // Refund buyer
+    const buyer = await env.DB.prepare('SELECT balance FROM users WHERE id = ?')
+      .bind(session.userId).first<{ balance: string }>();
+    const refundAmount = BigInt(order.total_amount);
+    const newBuyerBalance = ((buyer ? BigInt(buyer.balance) : 0n) + refundAmount).toString();
+    await env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?')
+      .bind(newBuyerBalance, session.userId).run();
+
+    // Restore stock & deduct seller for each item
+    for (const item of items.results) {
+      await env.DB.prepare('UPDATE products SET stock = stock + ? WHERE id = ?')
+        .bind(item.quantity, item.product_id).run();
+
+      if (item.store_id) {
+        const storeOwner = await env.DB.prepare('SELECT owner_user_id FROM stores WHERE id = ?')
+          .bind(item.store_id).first<{ owner_user_id: string }>();
+        if (storeOwner) {
+          const sellerRow = await env.DB.prepare('SELECT balance FROM users WHERE id = ?')
+            .bind(storeOwner.owner_user_id).first<{ balance: string }>();
+          const sellerBalance = sellerRow ? BigInt(sellerRow.balance) : 0n;
+          const deduct = BigInt(item.unit_price) * BigInt(item.quantity);
+          const newSellerBalance = sellerBalance > deduct
+            ? (sellerBalance - deduct).toString()
+            : '0';
+          await env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?')
+            .bind(newSellerBalance, storeOwner.owner_user_id).run();
+          await env.DB.prepare('UPDATE stores SET sales_count = MAX(0, sales_count - 1) WHERE id = ?')
+            .bind(item.store_id).run();
+        }
+      }
+    }
+
+    // Mark order as returned
+    await env.DB.prepare("UPDATE orders SET status = 'returned', updated_at = datetime('now') WHERE id = ?")
+      .bind(orderId).run();
+
+    const updated = await env.DB.prepare('SELECT * FROM orders WHERE id = ?').bind(orderId).first();
+    return json(updated);
+  }
+
   return null;
 }

@@ -15,6 +15,7 @@ export interface Store {
   store_name: string;
   description?: string;
   logo_url?: string;
+  brand_color?: string;
   rating: number;
   sales_count: number;
   created_at: string;
@@ -45,7 +46,7 @@ export interface Order {
   total_amount: string;
   payment_method: string;
   shipping_addr: string;
-  status: 'ordered' | 'preparing' | 'shipped' | 'delivered';
+  status: 'ordered' | 'preparing' | 'shipped' | 'delivered' | 'returned';
   created_at: string;
   updated_at: string;
   items?: OrderItem[];

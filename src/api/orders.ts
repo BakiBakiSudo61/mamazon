@@ -11,6 +11,8 @@ export const ordersApi = {
   get: (id: string) => api.get<Order>(`/orders/${id}`),
 
   list: () => api.get<{ orders: Order[] }>('/users/me/orders'),
+
+  returnOrder: (id: string) => api.post<Order>(`/orders/${id}/return`, {}),
 };
 
 export const cartApi = {

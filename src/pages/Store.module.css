@@ -5,6 +5,7 @@
   background: var(--surface-1);
   border-bottom: 1px solid var(--border);
   padding: 2rem 1rem;
+  transition: background 0.3s;
 }
 
 .headerInner {
@@ -12,7 +13,7 @@
   margin: 0 auto;
   display: flex;
   gap: 1.25rem;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .logo { width: 72px; height: 72px; border-radius: var(--radius-md); object-fit: cover; flex-shrink: 0; }
@@ -25,7 +26,24 @@
 .storeName { font-size: 1.5rem; font-weight: 700; margin: 0 0 0.4rem; }
 .meta { display: flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; color: var(--text-muted); }
 .dot { color: var(--border); }
-.desc { color: var(--text-muted); font-size: 0.88rem; margin: 0.5rem 0 0; max-width: 500px; }
+
+/* Markdown description */
+.desc {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin: 0.6rem 0 0;
+  max-width: 600px;
+  line-height: 1.6;
+}
+.desc p { margin: 0 0 0.4em; }
+.desc p:last-child { margin-bottom: 0; }
+.desc a { color: inherit; text-decoration: underline; }
+.desc strong { font-weight: 700; }
+.desc em { font-style: italic; }
+.desc ul, .desc ol { padding-left: 1.4em; margin: 0.3em 0; }
+.desc li { margin: 0.15em 0; }
+.desc h1, .desc h2, .desc h3 { font-size: 1em; font-weight: 700; margin: 0.5em 0 0.2em; }
+.desc code { font-family: monospace; background: rgba(128,128,128,0.15); padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.95em; }
 
 .inner { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 3rem; }
 .sectionTitle { font-size: 1.1rem; font-weight: 700; margin: 0 0 1.25rem; }

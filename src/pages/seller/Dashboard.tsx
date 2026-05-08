@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, TrendingUp, Package, DollarSign } from 'lucide-react';
+import { Plus, Edit, Trash2, TrendingUp, Package, DollarSign, Palette, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { sellerApi } from '../../api/seller';
 import { useUIStore } from '../../stores/uiStore';
 import { Button } from '../../components/ui/Button';
@@ -9,12 +10,26 @@ import type { Product, Store } from '../../types';
 import { formatPrice } from '../../utils/price';
 import styles from './Dashboard.module.css';
 
+function getPreviewText(hex: string): string {
+  const h = hex.replace('#', '').padEnd(6, '0');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return 0.299 * r + 0.587 * g + 0.114 * b > 140 ? '#111' : '#fff';
+}
+
 export const Dashboard: React.FC = () => {
   const addToast = useUIStore((s) => s.addToast);
   const [store, setStore] = useState<Store | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [revenue, setRevenue] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Store customization state
+  const [brandColor, setBrandColor] = useState('');
+  const [description, setDescription] = useState('');
+  const [previewMd, setPreviewMd] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const loadData = () => {
     setLoading(true);
@@ -23,6 +38,8 @@ export const Dashboard: React.FC = () => {
         setStore(d.store);
         setProducts(d.products);
         setRevenue(d.total_revenue);
+        setBrandColor(d.store.brand_color ?? '');
+        setDescription(d.store.description ?? '');
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -41,6 +58,43 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  // Restock state
+  const [restockId, setRestockId] = useState<string | null>(null);
+  const [restockQty, setRestockQty] = useState(10);
+  const [restocking, setRestocking] = useState(false);
+
+  const handleRestock = async () => {
+    if (!restockId) return;
+    setRestocking(true);
+    try {
+      await sellerApi.restockProduct(restockId, restockQty);
+      addToast({ type: 'success', message: `在庫を${restockQty}個追加しました` });
+      setRestockId(null);
+      loadData();
+    } catch (err: unknown) {
+      addToast({ type: 'error', message: err instanceof Error ? err.message : '在庫追加に失敗しました' });
+    } finally {
+      setRestocking(false);
+    }
+  };
+
+  const handleSaveStore = async () => {
+    if (!store) return;
+    setSaving(true);
+    try {
+      await sellerApi.updateStore(store.id, {
+        description,
+        brand_color: brandColor || '',
+      });
+      addToast({ type: 'success', message: 'ストア設定を保存しました' });
+      setStore((prev) => prev ? { ...prev, description, brand_color: brandColor || undefined } : prev);
+    } catch (err: unknown) {
+      addToast({ type: 'error', message: err instanceof Error ? err.message : '保存に失敗しました' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) return <div className={styles.loading}>読み込み中...</div>;
 
   return (
@@ -49,7 +103,14 @@ export const Dashboard: React.FC = () => {
         <div className={styles.pageHeader}>
           <div>
             <h1 className={styles.title}>出品者ダッシュボード</h1>
-            {store && <p className={styles.storeName}>{store.store_name}</p>}
+            {store && (
+              <div className={styles.storeNameRow}>
+                <p className={styles.storeName}>{store.store_name}</p>
+                <Link to={`/store/${store.id}`} className={styles.storeLink} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink size={13} /> ストアを見る
+                </Link>
+              </div>
+            )}
           </div>
           <Link to="/seller/product/new">
             <Button><Plus size={16} /> 商品を出品</Button>
@@ -98,6 +159,7 @@ export const Dashboard: React.FC = () => {
             <div className={styles.list}>
               {products.map((p) => {
                 const images = p.images_json ? JSON.parse(p.images_json) : [];
+                const isRestocking = restockId === p.id;
                 return (
                   <div key={p.id} className={styles.row}>
                     <img
@@ -115,20 +177,113 @@ export const Dashboard: React.FC = () => {
                         在庫{p.stock}
                       </Badge>
                     </div>
-                    <div className={styles.rowActions}>
-                      <Link to={`/seller/product/${p.id}/edit`}>
-                        <Button size="sm" variant="secondary"><Edit size={14} /></Button>
-                      </Link>
-                      <Button size="sm" variant="danger" onClick={() => handleDelete(p.id, p.name)}>
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
+                    {isRestocking ? (
+                      <div className={styles.restockForm}>
+                        <input
+                          type="number"
+                          className={styles.restockInput}
+                          min={1}
+                          max={100000}
+                          value={restockQty}
+                          onChange={(e) => setRestockQty(Math.max(1, parseInt(e.target.value) || 1))}
+                          autoFocus
+                        />
+                        <Button size="sm" onClick={handleRestock} loading={restocking}>追加</Button>
+                        <Button size="sm" variant="secondary" onClick={() => setRestockId(null)}>キャンセル</Button>
+                      </div>
+                    ) : (
+                      <div className={styles.rowActions}>
+                        <button
+                          className={styles.restockBtn}
+                          onClick={() => { setRestockId(p.id); setRestockQty(10); }}
+                          title="在庫を追加"
+                        >
+                          +在庫
+                        </button>
+                        <Link to={`/seller/product/${p.id}/edit`}>
+                          <Button size="sm" variant="secondary"><Edit size={14} /></Button>
+                        </Link>
+                        <Button size="sm" variant="danger" onClick={() => handleDelete(p.id, p.name)}>
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
         </div>
+
+        {/* Store Customization */}
+        {store && (
+          <div className={styles.customizeCard}>
+            <div className={styles.customizeHeader}>
+              <Palette size={18} />
+              <h2>ストアカスタマイズ</h2>
+            </div>
+
+            {/* Brand color */}
+            <div className={styles.customizeRow}>
+              <label className={styles.customizeLabel}>ブランドカラー（ヘッダー背景色）</label>
+              <div className={styles.colorRow}>
+                <input
+                  type="color"
+                  className={styles.colorInput}
+                  value={brandColor || '#1a1a2e'}
+                  onChange={(e) => setBrandColor(e.target.value)}
+                />
+                <span className={styles.colorHex}>{brandColor || '未設定'}</span>
+                {brandColor && (
+                  <button className={styles.clearBtn} onClick={() => setBrandColor('')}>クリア</button>
+                )}
+                <div
+                  className={styles.colorPreview}
+                  style={{ background: brandColor || 'var(--surface-1)', border: '1px solid var(--border)' }}
+                >
+                  <span style={{ color: brandColor ? getPreviewText(brandColor) : 'var(--text-muted)', fontSize: '0.78rem' }}>
+                    プレビュー
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Description (Markdown) */}
+            <div className={styles.customizeRow}>
+              <div className={styles.descLabelRow}>
+                <label className={styles.customizeLabel}>ストア説明（Markdown対応）</label>
+                <button
+                  className={styles.previewToggle}
+                  onClick={() => setPreviewMd((v) => !v)}
+                  type="button"
+                >
+                  {previewMd ? <><EyeOff size={13} /> 編集</>  : <><Eye size={13} /> プレビュー</>}
+                </button>
+              </div>
+              {previewMd ? (
+                <div className={styles.mdPreview}>
+                  {description
+                    ? <ReactMarkdown>{description}</ReactMarkdown>
+                    : <span className={styles.mdEmpty}>説明が入力されていません</span>
+                  }
+                </div>
+              ) : (
+                <textarea
+                  className={styles.mdTextarea}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder={'**太字**、*斜体*、リスト、リンクなどMarkdown記法が使えます\n\n例：\n## ようこそ\n私たちは**高品質**な商品を提供しています。'}
+                  rows={6}
+                />
+              )}
+              <p className={styles.mdHint}>Markdown記法に対応しています（**太字** / *斜体* / ## 見出し など）</p>
+            </div>
+
+            <div className={styles.customizeActions}>
+              <Button onClick={handleSaveStore} loading={saving}>設定を保存</Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

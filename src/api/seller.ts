@@ -26,6 +26,12 @@ export const sellerApi = {
   deleteProduct: (id: string) =>
     api.delete(`/seller/products/${id}`),
 
+  updateStore: (id: string, data: { description?: string; brand_color?: string; logo_url?: string }) =>
+    api.patch<Store>(`/stores/${id}`, data),
+
+  restockProduct: (id: string, quantity: number) =>
+    api.patch<Product>(`/seller/products/${id}/restock`, { quantity }),
+
   uploadImage: (file: File) => {
     const form = new FormData();
     form.append('file', file);

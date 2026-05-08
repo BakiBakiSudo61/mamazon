@@ -111,6 +111,26 @@ export async function handleSeller(
     return json({ ok: true });
   }
 
+  // PATCH /seller/products/:id/restock
+  const restockMatch = path.match(/^\/seller\/products\/([^/]+)\/restock$/);
+  if (restockMatch && request.method === 'PATCH') {
+    const productId = restockMatch[1];
+    const store = await env.DB.prepare('SELECT id FROM stores WHERE owner_user_id = ?')
+      .bind(session.userId).first<{ id: string }>();
+    if (!store) return json({ error: 'ストアが見つかりません' }, 404);
+
+    const body = await request.json() as { quantity: number };
+    const qty = Math.max(1, Math.floor(Number(body.quantity)));
+    if (!Number.isFinite(qty) || qty < 1 || qty > 100000) {
+      return json({ error: '数量は1〜100000の整数で入力してください' }, 400);
+    }
+
+    await env.DB.prepare('UPDATE products SET stock = stock + ? WHERE id = ? AND store_id = ?')
+      .bind(qty, productId, store.id).run();
+    const product = await env.DB.prepare('SELECT * FROM products WHERE id = ?').bind(productId).first();
+    return json(product);
+  }
+
   // POST /stores
   if (path === '/stores' && request.method === 'POST') {
     const existing = await env.DB.prepare('SELECT id FROM stores WHERE owner_user_id = ?')
@@ -144,6 +164,34 @@ export async function handleSeller(
     const storeId = storeMatch[1];
     const store = await env.DB.prepare('SELECT * FROM stores WHERE id = ?').bind(storeId).first();
     if (!store) return json({ error: 'ストアが見つかりません' }, 404);
+    return json(store);
+  }
+
+  // PATCH /stores/:id  (store owner only)
+  if (storeMatch && request.method === 'PATCH') {
+    const storeId = storeMatch[1];
+    const existing = await env.DB.prepare(
+      'SELECT * FROM stores WHERE id = ? AND owner_user_id = ?'
+    ).bind(storeId, session.userId).first<Record<string, unknown>>();
+    if (!existing) return json({ error: 'ストアが見つかりません' }, 404);
+
+    const body = await request.json() as Record<string, unknown>;
+
+    // brand_color validation: must be empty string or a CSS hex color
+    const rawColor = 'brand_color' in body ? body.brand_color : existing.brand_color;
+    const brandColor = rawColor === '' ? null : rawColor;
+    if (brandColor !== null && (typeof brandColor !== 'string' || !/^#[0-9a-fA-F]{3,8}$/.test(brandColor))) {
+      return json({ error: '無効なカラーコードです（例: #3b82f6）' }, 400);
+    }
+
+    const description = 'description' in body ? (body.description ?? null) : existing.description;
+    const logoUrl = 'logo_url' in body ? (body.logo_url ?? null) : existing.logo_url;
+
+    await env.DB.prepare(
+      'UPDATE stores SET description = ?, brand_color = ?, logo_url = ? WHERE id = ?'
+    ).bind(description, brandColor, logoUrl, storeId).run();
+
+    const store = await env.DB.prepare('SELECT * FROM stores WHERE id = ?').bind(storeId).first();
     return json(store);
   }
 

@@ -157,3 +157,50 @@
   .viewProductBtn span { display: none; }
   .itemThumb { width: 56px; height: 56px; }
 }
+
+/* Return */
+.returnBox {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.returnInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  flex: 1;
+}
+.returnBtn {
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--error, #d32f2f);
+  background: transparent;
+  color: var(--error, #d32f2f);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.returnBtn:hover:not(:disabled) { background: var(--error, #d32f2f); color: #fff; }
+.returnBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.returnedNotice {
+  background: rgba(211, 47, 47, 0.08);
+  border: 1px solid rgba(211, 47, 47, 0.25);
+  border-radius: var(--radius-lg);
+  padding: 0.9rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: var(--error, #d32f2f);
+}
