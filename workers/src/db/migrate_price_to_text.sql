@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS users_new (
   avatar_url    TEXT,
   address_json  TEXT,
   role          TEXT DEFAULT 'buyer',
-  balance       TEXT DEFAULT '100000000000',
+  balance       TEXT DEFAULT '1000000',
   created_at    TEXT DEFAULT (datetime('now'))
 );
 INSERT INTO users_new SELECT id, email, display_name, avatar_url, address_json, role, CAST(balance AS TEXT), created_at FROM users;

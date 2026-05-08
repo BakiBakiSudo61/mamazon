@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_url    TEXT,
   address_json  TEXT,
   role          TEXT DEFAULT 'buyer',
-  balance       TEXT DEFAULT '100000000000',
+  balance       TEXT DEFAULT '1000000',
   created_at    TEXT DEFAULT (datetime('now'))
 );
 

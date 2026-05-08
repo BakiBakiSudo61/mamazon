@@ -87,8 +87,8 @@ export async function handleAuth(
 
     // Upsert user in D1
     await env.DB.prepare(`
-      INSERT INTO users (id, email, display_name, avatar_url)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO users (id, email, display_name, avatar_url, balance)
+      VALUES (?, ?, ?, ?, '1000000')
       ON CONFLICT(id) DO UPDATE SET
         email = excluded.email,
         display_name = CASE WHEN users.display_name = '' THEN excluded.display_name ELSE users.display_name END,
