@@ -27,7 +27,7 @@ export function FinancePage() {
     setConverting(true);
     setConvertMsg('');
     try {
-      const res = await api.post<{ newBalance: number; newFinanceBalance: number }>('/finance/convert', { amount: convertAmount });
+      await api.post<{ newBalance: number; newFinanceBalance: number }>('/finance/convert', { amount: convertAmount });
       setConvertMsg(`✅ ¥${convertAmount.toLocaleString()} をMamazon残高に変換しました！`);
       setConvertAmount(0);
       await fetchMe();

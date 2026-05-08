@@ -18,7 +18,7 @@ interface PortfolioItem {
 }
 
 export function Market() {
-  const { user, fetchMe } = useAuthStore();
+  const { fetchMe } = useAuthStore();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [prevPrices, setPrevPrices] = useState<Record<string, number>>({});
