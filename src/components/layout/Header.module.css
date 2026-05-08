@@ -321,6 +321,20 @@
   .greeting, .returnsBtn { display: none; }
 }
 
+@media (min-width: 641px) and (max-width: 820px) {
+  .inner {
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+  }
+  .searchCategory { display: none; }
+  .cartText { display: none; }
+  .logoText { font-size: 1.2rem; }
+  .nav { gap: 0; }
+  .userBtn, .cartBtn {
+    padding: 0.4rem 0.4rem;
+  }
+}
+
 /* On mobile (≤640px): hide the entire desktop inner bar */
 @media (max-width: 640px) {
   .inner { display: none; }

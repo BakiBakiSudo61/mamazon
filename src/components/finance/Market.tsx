@@ -5,7 +5,35 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 import styles from './Market.module.css';
 
 const HIST_KEY = 'mamazon_mkt_hist';
-const MAX_HIST = 120; // 2 hours at 1-min intervals
+const MAX_HIST = 120;
+
+// Color map for fallback avatars when image is not provided
+const ASSET_COLORS: Record<string, string> = {
+  MMZN: '#FF9900', PEAR: '#a8d8a8', MCHD: '#00adef', GOGL: '#4285f4',
+  NVDX: '#76b900', BTK: '#f7931a', ETB: '#627eea', SLC: '#9945ff',
+  DMC: '#c3a634', MMC: '#e94560', PPC: '#4caf50',
+};
+
+function AssetLogo({ id, type }: { id: string; type: string }) {
+  const [hasImg, setHasImg] = useState(true);
+  const fallbackBg = ASSET_COLORS[id] || (type === 'crypto' ? '#7c3aed' : '#1e40af');
+  return (
+    <div className={styles.assetLogoWrap}>
+      {hasImg ? (
+        <img
+          src={`/assets/market/${id}.png`}
+          alt={id}
+          className={styles.assetLogo}
+          onError={() => setHasImg(false)}
+        />
+      ) : (
+        <div className={styles.assetLogoFallback} style={{ background: fallbackBg }}>
+          {id.charAt(0)}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Asset {
   id: string;
@@ -186,20 +214,23 @@ export function Market() {
           return (
             <div key={asset.id} className={styles.assetCard}>
               <div className={styles.assetTop}>
-                <div>
-                  <div className={styles.assetName}>{asset.name}</div>
-                  <div className={styles.assetMeta}>
-                    <span className={styles.assetId}>{asset.id}</span>
-                    <span className={`${styles.assetType} ${asset.type === 'crypto' ? styles.crypto : styles.stock}`}>
-                      {asset.type === 'crypto' ? '仮想通貨' : '株式'}
-                    </span>
-                    {asset.hasHalving && halvingDaysLeft[asset.id] !== undefined && (
-                      <span className={styles.halvingBadge}>
-                        {halvingDaysLeft[asset.id] === 0 ? '🔥 半減期 今日！' : `⚡ 半減期 ${halvingDaysLeft[asset.id]}日`}
+                <div className={styles.assetTopLeft}>
+                  <AssetLogo id={asset.id} type={asset.type} />
+                  <div>
+                    <div className={styles.assetName}>{asset.name}</div>
+                    <div className={styles.assetMeta}>
+                      <span className={styles.assetId}>{asset.id}</span>
+                      <span className={`${styles.assetType} ${asset.type === 'crypto' ? styles.crypto : styles.stock}`}>
+                        {asset.type === 'crypto' ? '仮想通貨' : '株式'}
                       </span>
-                    )}
+                      {asset.hasHalving && halvingDaysLeft[asset.id] !== undefined && (
+                        <span className={styles.halvingBadge}>
+                          {halvingDaysLeft[asset.id] === 0 ? '🔥 半減期 今日！' : `⚡ 半減期 ${halvingDaysLeft[asset.id]}日`}
+                        </span>
+                      )}
+                    </div>
+                    <div className={styles.assetDesc}>{asset.description}</div>
                   </div>
-                  <div className={styles.assetDesc}>{asset.description}</div>
                 </div>
                 <div className={styles.priceBlock}>
                   <div className={`${styles.price} ${isUp ? styles.priceUp : styles.priceDown}`}>
