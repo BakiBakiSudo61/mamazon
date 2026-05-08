@@ -52,12 +52,13 @@ export async function handleSeller(
     const id = crypto.randomUUID();
 
     await env.DB.prepare(`
-      INSERT INTO products (id, store_id, name, description, price, stock, category, condition, is_featured, images_json, tags_json)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO products (id, store_id, name, description, price, stock, made_to_order, category, condition, is_featured, images_json, tags_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id, store.id,
       body.name, body.description ?? null,
       priceStr, body.stock ?? 0,
+      body.made_to_order ? 1 : 0,
       body.category ?? 'その他',
       body.condition ?? 'new',
       body.is_featured ?? 0,
@@ -84,12 +85,13 @@ export async function handleSeller(
     }
     await env.DB.prepare(`
       UPDATE products SET
-        name = ?, description = ?, price = ?, stock = ?,
+        name = ?, description = ?, price = ?, stock = ?, made_to_order = ?,
         category = ?, condition = ?, is_featured = ?, images_json = ?
       WHERE id = ? AND store_id = ?
     `).bind(
       body.name, body.description ?? null,
       priceStr, body.stock ?? 0,
+      body.made_to_order ? 1 : 0,
       body.category, body.condition ?? 'new',
       body.is_featured ?? 0, body.images_json ?? '[]',
       productId, store.id

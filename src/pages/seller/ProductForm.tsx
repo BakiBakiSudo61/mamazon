@@ -28,7 +28,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ mode }) => {
   const [descTab, setDescTab] = useState<'write' | 'preview'>('write');
   const [inputKey, setInputKey] = useState(0);
   const [form, setForm] = useState<Partial<Product>>({
-    name: '', description: '', price: '',  stock: 1,
+    name: '', description: '', price: '',  stock: 1, made_to_order: 0,
     category: '電子機器', condition: 'new', is_featured: 0,
   });
 
@@ -240,8 +240,19 @@ export const ProductForm: React.FC<ProductFormProps> = ({ mode }) => {
                 value={form.stock ?? 0}
                 onChange={update('stock')}
                 required
+                disabled={form.made_to_order === 1}
               />
             </div>
+            <label className={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={form.made_to_order === 1}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, made_to_order: e.target.checked ? 1 : 0 }))
+                }
+              />
+              受注生産（在庫数にかかわらず購入可能）
+            </label>
           </div>
 
           {/* Featured */}

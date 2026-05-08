@@ -32,11 +32,11 @@ export async function handleOrders(
     let total = 0n;
     for (const item of body.items) {
       const product = await env.DB.prepare(
-        'SELECT price, stock FROM products WHERE id = ?'
-      ).bind(item.product_id).first<{ price: string; stock: number }>();
+        'SELECT price, stock, made_to_order FROM products WHERE id = ?'
+      ).bind(item.product_id).first<{ price: string; stock: number; made_to_order: number }>();
 
       if (!product) return json({ error: `商品が見つかりません: ${item.product_id}` }, 400);
-      if (product.stock < item.quantity) return json({ error: '在庫が不足しています' }, 400);
+      if (!product.made_to_order && product.stock < item.quantity) return json({ error: '在庫が不足しています' }, 400);
       total += BigInt(product.price) * BigInt(item.quantity);
     }
 

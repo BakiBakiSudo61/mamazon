@@ -54,7 +54,7 @@ export const Cart: React.FC = () => {
                       onChange={(e) => updateItem(item.product_id, Number(e.target.value))}
                       disabled={loading}
                     >
-                      {Array.from({ length: Math.min(item.product?.stock ?? 10, 10) }, (_, i) => i + 1).map((n) => (
+                      {Array.from({ length: Math.min(item.product?.made_to_order === 1 ? 10 : (item.product?.stock ?? 10), 10) }, (_, i) => i + 1).map((n) => (
                         <option key={n} value={n}>{n}</option>
                       ))}
                     </select>

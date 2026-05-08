@@ -60,15 +60,20 @@ export const Dashboard: React.FC = () => {
 
   // Restock state
   const [restockId, setRestockId] = useState<string | null>(null);
-  const [restockQty, setRestockQty] = useState(10);
+  const [restockQty, setRestockQty] = useState<string>('10');
   const [restocking, setRestocking] = useState(false);
 
   const handleRestock = async () => {
     if (!restockId) return;
+    const qty = Math.max(1, parseInt(restockQty) || 1);
+    if (qty > 100000) {
+      addToast({ type: 'error', message: '数量は100000以下で入力してください' });
+      return;
+    }
     setRestocking(true);
     try {
-      await sellerApi.restockProduct(restockId, restockQty);
-      addToast({ type: 'success', message: `在庫を${restockQty}個追加しました` });
+      await sellerApi.restockProduct(restockId, qty);
+      addToast({ type: 'success', message: `在庫を${qty}個追加しました` });
       setRestockId(null);
       loadData();
     } catch (err: unknown) {
@@ -173,9 +178,13 @@ export const Dashboard: React.FC = () => {
                     </div>
                     <div className={styles.rowMeta}>
                       <span className={styles.rowPrice}>{formatPrice(p.price)}</span>
-                      <Badge variant={p.stock > 0 ? 'success' : 'danger'}>
-                        在庫{p.stock}
-                      </Badge>
+                      {p.made_to_order === 1 ? (
+                        <Badge variant="warning">受注生産</Badge>
+                      ) : (
+                        <Badge variant={p.stock > 0 ? 'success' : 'danger'}>
+                          在庫{p.stock}
+                        </Badge>
+                      )}
                     </div>
                     {isRestocking ? (
                       <div className={styles.restockForm}>
@@ -185,7 +194,7 @@ export const Dashboard: React.FC = () => {
                           min={1}
                           max={100000}
                           value={restockQty}
-                          onChange={(e) => setRestockQty(Math.max(1, parseInt(e.target.value) || 1))}
+                          onChange={(e) => setRestockQty(e.target.value.replace(/[^0-9]/g, ''))}
                           autoFocus
                         />
                         <Button size="sm" onClick={handleRestock} loading={restocking}>追加</Button>
@@ -193,13 +202,15 @@ export const Dashboard: React.FC = () => {
                       </div>
                     ) : (
                       <div className={styles.rowActions}>
-                        <button
-                          className={styles.restockBtn}
-                          onClick={() => { setRestockId(p.id); setRestockQty(10); }}
-                          title="在庫を追加"
-                        >
-                          +在庫
-                        </button>
+                        {p.made_to_order !== 1 && (
+                          <button
+                            className={styles.restockBtn}
+                            onClick={() => { setRestockId(p.id); setRestockQty('10'); }}
+                            title="在庫を追加"
+                          >
+                            +在庫
+                          </button>
+                        )}
                         <Link to={`/seller/product/${p.id}/edit`}>
                           <Button size="sm" variant="secondary"><Edit size={14} /></Button>
                         </Link>

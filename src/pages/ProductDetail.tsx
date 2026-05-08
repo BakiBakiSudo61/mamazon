@@ -293,14 +293,16 @@ export const ProductDetail: React.FC = () => {
               </div>
 
               <div className={styles.stockStatus}>
-                {product.stock > 0 ? (
+                {product.made_to_order === 1 ? (
+                  <h4 className={styles.madeToOrder}>受注生産</h4>
+                ) : product.stock > 0 ? (
                   <h4 className={styles.inStock}>在庫あり</h4>
                 ) : (
                   <h4 className={styles.outStock}>在庫なし</h4>
                 )}
               </div>
 
-              {product.stock > 0 && (
+              {(product.made_to_order === 1 || product.stock > 0) && (
                 <div className={styles.qtyContainer}>
                   <label htmlFor="qty">数量: </label>
                   <select
@@ -309,7 +311,7 @@ export const ProductDetail: React.FC = () => {
                     value={qty}
                     onChange={(e) => setQty(Number(e.target.value))}
                   >
-                    {Array.from({ length: Math.min(product.stock, 10) }, (_, i) => i + 1).map((n) => (
+                    {Array.from({ length: product.made_to_order === 1 ? 10 : Math.min(product.stock, 10) }, (_, i) => i + 1).map((n) => (
                       <option key={n} value={n}>{n}</option>
                     ))}
                   </select>
@@ -323,7 +325,7 @@ export const ProductDetail: React.FC = () => {
                   className={styles.addToCartBtn}
                   onClick={handleAddToCart}
                   loading={addingCart}
-                  disabled={product.stock === 0}
+                  disabled={product.made_to_order !== 1 && product.stock === 0}
                 >
                   <ShoppingCart size={18} />
                   カートに入れる
@@ -335,7 +337,7 @@ export const ProductDetail: React.FC = () => {
                   className={styles.buyNowBtn}
                   onClick={handleBuyNow}
                   loading={buyingNow}
-                  disabled={product.stock === 0}
+                  disabled={product.made_to_order !== 1 && product.stock === 0}
                 >
                   今すぐ買う
                 </Button>

@@ -374,6 +374,7 @@
 
 .inStock { color: var(--green); }
 .outStock { color: var(--red); }
+.madeToOrder { color: var(--accent); }
 
 .qtyContainer {
   display: flex;

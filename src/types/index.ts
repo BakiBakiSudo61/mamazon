@@ -28,6 +28,7 @@ export interface Product {
   description?: string;
   price: string;
   stock: number;
+  made_to_order: number;
   category: string;
   condition: string;
   rating: number;
