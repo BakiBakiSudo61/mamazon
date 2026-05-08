@@ -7,6 +7,16 @@ function json(data: unknown, status = 200) {
   });
 }
 
+/** 注文作成からの経過秒数でステータスを自動進行する（返品済みはそのまま） */
+function computeStatus(dbStatus: string, createdAt: string): string {
+  if (dbStatus === 'returned') return 'returned';
+  const elapsed = (Date.now() - new Date(createdAt + 'Z').getTime()) / 1000;
+  if (elapsed < 5)  return 'ordered';
+  if (elapsed < 10) return 'preparing';
+  if (elapsed < 18) return 'shipped';
+  return 'delivered';
+}
+
 interface CartItem {
   product_id: string;
   quantity: number;
@@ -106,14 +116,15 @@ export async function handleOrders(
   if (orderMatch && request.method === 'GET') {
     const orderId = orderMatch[1];
     const order = await env.DB.prepare('SELECT * FROM orders WHERE id = ? AND buyer_user_id = ?')
-      .bind(orderId, session.userId).first();
+      .bind(orderId, session.userId).first<Record<string, unknown>>();
     if (!order) return json({ error: '注文が見つかりません' }, 404);
     const items = await env.DB.prepare(
       `SELECT oi.*, p.name, p.images_json FROM order_items oi
        LEFT JOIN products p ON oi.product_id = p.id
        WHERE oi.order_id = ?`
     ).bind(orderId).all();
-    return json({ ...order, items: items.results });
+    const status = computeStatus(order.status as string, order.created_at as string);
+    return json({ ...order, status, items: items.results });
   }
 
   // GET /users/me/orders
@@ -121,8 +132,12 @@ export async function handleOrders(
     const rows = await env.DB.prepare(
       `SELECT o.*, (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) as item_count
        FROM orders o WHERE o.buyer_user_id = ? ORDER BY o.created_at DESC`
-    ).bind(session.userId).all();
-    return json({ orders: rows.results });
+    ).bind(session.userId).all<Record<string, unknown>>();
+    const orders = rows.results.map((o) => ({
+      ...o,
+      status: computeStatus(o.status as string, o.created_at as string),
+    }));
+    return json({ orders });
   }
 
   // POST /orders/:id/return

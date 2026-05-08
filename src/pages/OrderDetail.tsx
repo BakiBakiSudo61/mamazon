@@ -46,6 +46,15 @@ export const OrderDetail: React.FC = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // 配達完了 / 返品済みになるまで2秒ごとに自動更新
+  useEffect(() => {
+    if (!order || order.status === 'delivered' || order.status === 'returned') return;
+    const timer = setInterval(() => {
+      ordersApi.get(order.id).then(setOrder).catch(() => {});
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [order?.id, order?.status]);
+
   const handleReturn = async () => {
     if (!order) return;
     if (!confirm('この注文を返品しますか？\n購入金額が残高に返金されます。')) return;
