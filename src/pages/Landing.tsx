@@ -2,9 +2,8 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Package, ShoppingBag, Store, Star } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { BASE_URL } from '../api/client';
 import styles from './Landing.module.css';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787/v1';
 
 export const Landing: React.FC = () => {
   const { user, initialized } = useAuthStore();
@@ -15,7 +14,7 @@ export const Landing: React.FC = () => {
   }, [initialized, user, navigate]);
 
   const handleGoogleLogin = () => {
-    window.location.href = `${API_BASE}/auth/google`;
+    window.location.href = `${BASE_URL}/auth/google`;
   };
 
   return (
