@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Store, Product } from '../types';
+import type { Store, Product, SellerSaleItem } from '../types';
 
 export const sellerApi = {
   createStore: (data: {
@@ -31,6 +31,9 @@ export const sellerApi = {
 
   restockProduct: (id: string, quantity: number) =>
     api.patch<Product>(`/seller/products/${id}/restock`, { quantity }),
+
+  getSellerSales: () =>
+    api.get<{ sales: SellerSaleItem[] }>('/seller/sales'),
 
   uploadImage: (file: File) => {
     const form = new FormData();

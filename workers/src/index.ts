@@ -86,8 +86,15 @@ export default {
         const session = await getSession(request, env);
         if (!session) return json({ error: '認証が必要です' }, 401, origin);
         const body = await request.json() as Record<string, unknown>;
-        await env.DB.prepare('UPDATE users SET display_name = ? WHERE id = ?')
-          .bind(body.display_name, session.userId).run();
+        const fields: string[] = ['display_name = ?'];
+        const values: unknown[] = [body.display_name];
+        if (typeof body.avatar_url === 'string' || body.avatar_url === null) {
+          fields.push('avatar_url = ?');
+          values.push(body.avatar_url || null);
+        }
+        values.push(session.userId);
+        await env.DB.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`)
+          .bind(...values).run();
         const user = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(session.userId).first();
         return json(user, 200, origin);
       }

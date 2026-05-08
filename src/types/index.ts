@@ -65,6 +65,18 @@ export interface OrderItem {
   product?: Product;
 }
 
+export interface SellerSaleItem {
+  id: string;
+  order_id: string;
+  quantity: number;
+  unit_price: string;
+  order_date: string;
+  status: string;
+  product_id: string;
+  product_name: string;
+  images_json?: string;
+}
+
 export interface Review {
   id: string;
   product_id: string;

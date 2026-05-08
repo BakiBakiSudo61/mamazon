@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { User, Wallet, Store, Edit } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { User, Wallet, Store, Edit, Camera } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
 import { api } from '../api/client';
+import { sellerApi } from '../api/seller';
 import { formatPrice } from '../utils/price';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -15,8 +16,28 @@ export const Account: React.FC = () => {
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(user?.display_name ?? '');
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   if (!user) return null;
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!avatarInputRef.current) return;
+    avatarInputRef.current.value = '';
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const { url } = await sellerApi.uploadImage(file);
+      const updated = await api.put<typeof user>('/users/me', { display_name: user.display_name, avatar_url: url });
+      setUser(updated);
+      addToast({ type: 'success', message: 'アイコンを更新しました' });
+    } catch {
+      addToast({ type: 'error', message: 'アイコンの更新に失敗しました' });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -40,11 +61,28 @@ export const Account: React.FC = () => {
         <h1 className={styles.title}>アカウント設定</h1>
 
         <div className={styles.profileCard}>
-          {user.avatar_url ? (
-            <img src={user.avatar_url} alt={user.display_name} className={styles.avatar} />
-          ) : (
-            <div className={styles.avatarPlaceholder}><User size={36} /></div>
-          )}
+          <div className={styles.avatarWrapper}>
+            {user.avatar_url ? (
+              <img src={user.avatar_url} alt={user.display_name} className={styles.avatar} />
+            ) : (
+              <div className={styles.avatarPlaceholder}><User size={36} /></div>
+            )}
+            <button
+              className={styles.avatarEditBtn}
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              aria-label="アイコンを変更"
+            >
+              {uploadingAvatar ? <span className={styles.avatarSpinner} /> : <Camera size={14} />}
+            </button>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              style={{ display: 'none' }}
+              onChange={handleAvatarUpload}
+            />
+          </div>
           <div className={styles.profileInfo}>
             <div className={styles.nameRow}>
               {editing ? (

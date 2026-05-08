@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2, TrendingUp, Package, DollarSign, Palette, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import { Plus, Edit, Trash2, TrendingUp, Package, DollarSign, Palette, Eye, EyeOff, ExternalLink, ShoppingBag } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { sellerApi } from '../../api/seller';
 import { useUIStore } from '../../stores/uiStore';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import type { Product, Store } from '../../types';
+import type { Product, Store, SellerSaleItem } from '../../types';
 import { formatPrice } from '../../utils/price';
 import styles from './Dashboard.module.css';
 
@@ -24,6 +24,7 @@ export const Dashboard: React.FC = () => {
   const [store, setStore] = useState<Store | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [revenue, setRevenue] = useState(0);
+  const [sales, setSales] = useState<SellerSaleItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Store customization state
@@ -34,13 +35,17 @@ export const Dashboard: React.FC = () => {
 
   const loadData = () => {
     setLoading(true);
-    sellerApi.getDashboard()
-      .then((d) => {
+    Promise.all([
+      sellerApi.getDashboard(),
+      sellerApi.getSellerSales(),
+    ])
+      .then(([d, s]) => {
         setStore(d.store);
         setProducts(d.products);
         setRevenue(d.total_revenue);
         setBrandColor(d.store.brand_color ?? '');
         setDescription(d.store.description ?? '');
+        setSales(s.sales);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -220,6 +225,64 @@ export const Dashboard: React.FC = () => {
                         </Button>
                       </div>
                     )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Sales History */}
+        <div className={styles.salesCard}>
+          <div className={styles.salesHeader}>
+            <ShoppingBag size={18} />
+            <h2>販売履歴</h2>
+            <span className={styles.salesCount}>{sales.length}件</span>
+          </div>
+          {sales.length === 0 ? (
+            <div className={styles.empty}>
+              <ShoppingBag size={40} opacity={0.3} />
+              <p>まだ販売実績がありません</p>
+            </div>
+          ) : (
+            <div className={styles.salesList}>
+              <div className={styles.salesListHeader}>
+                <span>商品</span>
+                <span className={styles.salesColQty}>数量</span>
+                <span className={styles.salesColPrice}>金額</span>
+                <span className={styles.salesColStatus}>ステータス</span>
+                <span className={styles.salesColDate}>注文日</span>
+              </div>
+              {sales.map((s) => {
+                const img = s.images_json ? (JSON.parse(s.images_json)[0] ?? null) : null;
+                const total = (BigInt(s.unit_price) * BigInt(s.quantity)).toString();
+                const statusMap: Record<string, { label: string; cls: string }> = {
+                  ordered:   { label: '注文済み', cls: styles.statusOrdered },
+                  preparing: { label: '準備中',   cls: styles.statusPreparing },
+                  shipped:   { label: '発送済み', cls: styles.statusShipped },
+                  delivered: { label: '配達済み', cls: styles.statusDelivered },
+                  returned:  { label: '返品',     cls: styles.statusReturned },
+                };
+                const st = statusMap[s.status] ?? { label: s.status, cls: '' };
+                const date = new Date(s.order_date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'short', day: 'numeric' });
+                return (
+                  <div key={s.id} className={styles.salesRow}>
+                    <div className={styles.salesProduct}>
+                      <img
+                        src={img || 'https://placehold.co/40x40/1a1a2e/e0e0e0?text=?'}
+                        alt={s.product_name}
+                        className={styles.salesThumb}
+                      />
+                      <Link to={`/product/${s.product_id}`} className={styles.salesName}>
+                        {s.product_name}
+                      </Link>
+                    </div>
+                    <span className={styles.salesColQty}>{s.quantity}個</span>
+                    <span className={styles.salesColPrice}>{formatPrice(total)}</span>
+                    <span className={styles.salesColStatus}>
+                      <span className={`${styles.statusBadge} ${st.cls}`}>{st.label}</span>
+                    </span>
+                    <span className={styles.salesColDate}>{date}</span>
                   </div>
                 );
               })}

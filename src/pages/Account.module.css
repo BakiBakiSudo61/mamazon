@@ -20,6 +20,44 @@
   color: var(--text-muted); flex-shrink: 0;
 }
 
+.avatarWrapper {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+}
+
+.avatarEditBtn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--surface-1);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s;
+}
+.avatarEditBtn:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 80%, #000); }
+.avatarEditBtn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+.avatarSpinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 .profileInfo { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
 
 .nameRow { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }

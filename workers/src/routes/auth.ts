@@ -92,7 +92,7 @@ export async function handleAuth(
       ON CONFLICT(id) DO UPDATE SET
         email = excluded.email,
         display_name = CASE WHEN users.display_name = '' THEN excluded.display_name ELSE users.display_name END,
-        avatar_url = excluded.avatar_url
+        avatar_url = CASE WHEN users.avatar_url IS NULL THEN excluded.avatar_url ELSE users.avatar_url END
     `).bind(profile.id, profile.email, profile.name, profile.picture).run();
 
     // Create session

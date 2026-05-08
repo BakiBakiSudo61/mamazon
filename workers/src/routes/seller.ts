@@ -38,6 +38,28 @@ export async function handleSeller(
     });
   }
 
+  // GET /seller/sales
+  if (path === '/seller/sales' && request.method === 'GET') {
+    const store = await env.DB.prepare('SELECT id FROM stores WHERE owner_user_id = ?')
+      .bind(session.userId).first<{ id: string }>();
+    if (!store) return json({ error: 'ストアが見つかりません' }, 404);
+
+    const rows = await env.DB.prepare(`
+      SELECT
+        oi.id, oi.order_id, oi.quantity, oi.unit_price,
+        o.created_at AS order_date, o.status,
+        p.id AS product_id, p.name AS product_name, p.images_json
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      JOIN products p ON oi.product_id = p.id
+      WHERE p.store_id = ?
+      ORDER BY o.created_at DESC
+      LIMIT 100
+    `).bind(store.id).all();
+
+    return json({ sales: rows.results });
+  }
+
   // POST /seller/products
   if (path === '/seller/products' && request.method === 'POST') {
     const store = await env.DB.prepare('SELECT id FROM stores WHERE owner_user_id = ?')
