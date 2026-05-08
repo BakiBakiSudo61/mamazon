@@ -233,6 +233,11 @@ export const ProductDetail: React.FC = () => {
             <div className={styles.badges}>
               <Badge variant="info">{product.category}</Badge>
               {product.condition === 'new' && <Badge variant="success">新品</Badge>}
+              {product.condition === 'like_new' && <Badge variant="success">新品同様</Badge>}
+              {product.condition === 'good' && <Badge variant="info">良い</Badge>}
+              {product.condition === 'fair' && <Badge variant="warning">普通</Badge>}
+              {product.condition === 'vintage' && <Badge variant="warning">ビンテージ</Badge>}
+              {product.condition === 'junk' && <Badge variant="danger">古い（ジャンク）</Badge>}
             </div>
 
             <div className={styles.aboutItem}>

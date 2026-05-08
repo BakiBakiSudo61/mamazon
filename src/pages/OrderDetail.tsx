@@ -4,7 +4,7 @@ import { Package, ChevronLeft, ExternalLink, Truck, RotateCcw } from 'lucide-rea
 import { ordersApi } from '../api/orders';
 import { useUIStore } from '../stores/uiStore';
 import { Badge } from '../components/ui/Badge';
-import { formatPrice, multiplyPrice } from '../utils/price';
+import { formatPrice, multiplyPrice, computeOrderStatus } from '../utils/price';
 import type { Order, OrderItem } from '../types';
 import styles from './OrderDetail.module.css';
 
@@ -36,6 +36,8 @@ export const OrderDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [returning, setReturning] = useState(false);
+  // フロント側でタイマー再描画してステータスを進行させる
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     if (!id) return;
@@ -46,14 +48,14 @@ export const OrderDetail: React.FC = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // 配達完了 / 返品済みになるまで 500ms ごとに自動更新
+  // 配達完了になるまで 300ms ごとに再描画（サーバー通信なし）
   useEffect(() => {
-    if (!order || order.status === 'delivered' || order.status === 'returned') return;
-    const timer = setInterval(() => {
-      ordersApi.get(order.id).then(setOrder).catch(() => {});
-    }, 500);
+    if (!order || order.status === 'returned') return;
+    const computed = computeOrderStatus(order.status, order.created_at);
+    if (computed === 'delivered') return;
+    const timer = setInterval(() => setTick((t) => t + 1), 300);
     return () => clearInterval(timer);
-  }, [order?.id, order?.status]);
+  }, [order, tick]);
 
   const handleReturn = async () => {
     if (!order) return;

@@ -7,18 +7,6 @@ function json(data: unknown, status = 200) {
   });
 }
 
-/** 注文作成からの経過秒数でステータスを自動進行する（返品済みはそのまま） */
-function computeStatus(dbStatus: string, createdAt: string): string {
-  if (dbStatus === 'returned') return 'returned';
-  // SQLite は "YYYY-MM-DD HH:MM:SS" 形式で保存するため T+Z に変換
-  const isoStr = createdAt.replace(' ', 'T') + 'Z';
-  const elapsed = (Date.now() - new Date(isoStr).getTime()) / 1000;
-  if (elapsed < 1)   return 'ordered';
-  if (elapsed < 2.5) return 'preparing';
-  if (elapsed < 4)   return 'shipped';
-  return 'delivered';
-}
-
 interface CartItem {
   product_id: string;
   quantity: number;
@@ -125,8 +113,7 @@ export async function handleOrders(
        LEFT JOIN products p ON oi.product_id = p.id
        WHERE oi.order_id = ?`
     ).bind(orderId).all();
-    const status = computeStatus(order.status as string, order.created_at as string);
-    return json({ ...order, status, items: items.results });
+    return json({ ...order, items: items.results });
   }
 
   // GET /users/me/orders
@@ -135,11 +122,7 @@ export async function handleOrders(
       `SELECT o.*, (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) as item_count
        FROM orders o WHERE o.buyer_user_id = ? ORDER BY o.created_at DESC`
     ).bind(session.userId).all<Record<string, unknown>>();
-    const orders = rows.results.map((o) => ({
-      ...o,
-      status: computeStatus(o.status as string, o.created_at as string),
-    }));
-    return json({ orders });
+    return json({ orders: rows.results });
   }
 
   // POST /orders/:id/return
@@ -151,8 +134,11 @@ export async function handleOrders(
     ).bind(orderId, session.userId).first<{ id: string; status: string; total_amount: string; buyer_user_id: string; created_at: string }>();
 
     if (!order) return json({ error: '注文が見つかりません' }, 404);
-    const computedStatus = computeStatus(order.status, order.created_at);
-    if (computedStatus !== 'delivered') {
+    // 配達完了かどうかは created_at からの経過時間で判断（DB status は 'ordered' のまま）
+    const isoStr = order.created_at.replace(' ', 'T') + 'Z';
+    const elapsedSec = (Date.now() - new Date(isoStr).getTime()) / 1000;
+    const isDelivered = order.status === 'delivered' || (order.status !== 'returned' && elapsedSec >= 4);
+    if (!isDelivered) {
       return json({ error: '配達完了後の注文のみ返品できます' }, 400);
     }
 

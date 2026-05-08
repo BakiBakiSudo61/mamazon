@@ -100,3 +100,22 @@ export function isValidPrice(value: string): boolean {
   // 1無量大数(10^68)未満 = 最大68桁
   return /^\d+$/.test(value) && value.length <= 68;
 }
+
+/**
+ * 注文の created_at（UTC文字列）と DB ステータスから表示用ステータスを計算する。
+ * Worker を再デプロイせずフロントだけで進行を表現するための関数。
+ * 0〜1秒: ordered / 1〜2.5秒: preparing / 2.5〜4秒: shipped / 4秒以降: delivered
+ */
+export function computeOrderStatus(
+  dbStatus: string,
+  createdAt: string
+): 'ordered' | 'preparing' | 'shipped' | 'delivered' | 'returned' {
+  if (dbStatus === 'returned') return 'returned';
+  // SQLite は "YYYY-MM-DD HH:MM:SS" 形式（UTC）で保存
+  const isoStr = createdAt.includes('T') ? createdAt : createdAt.replace(' ', 'T') + 'Z';
+  const elapsed = (Date.now() - new Date(isoStr).getTime()) / 1000;
+  if (elapsed < 1)   return 'ordered';
+  if (elapsed < 2.5) return 'preparing';
+  if (elapsed < 4)   return 'shipped';
+  return 'delivered';
+}

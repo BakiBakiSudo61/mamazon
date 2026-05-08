@@ -6,6 +6,14 @@ import { formatPrice } from '../utils/price';
 import type { Order } from '../types';
 import styles from './OrderComplete.module.css';
 
+const STATUS_LABEL: Record<string, string> = {
+  ordered: '受付完了',
+  preparing: '準備中',
+  shipped: '発送済み',
+  delivered: '配達完了',
+  returned: '返品済み',
+};
+
 export const OrderComplete: React.FC = () => {
   const [params] = useSearchParams();
   const orderId = params.get('orderId');
@@ -14,6 +22,15 @@ export const OrderComplete: React.FC = () => {
   useEffect(() => {
     if (orderId) ordersApi.get(orderId).then(setOrder).catch(() => {});
   }, [orderId]);
+
+  // 配達完了になるまで 500ms ごとに自動更新
+  useEffect(() => {
+    if (!order || order.status === 'delivered' || order.status === 'returned') return;
+    const timer = setInterval(() => {
+      ordersApi.get(order.id).then(setOrder).catch(() => {});
+    }, 500);
+    return () => clearInterval(timer);
+  }, [order?.id, order?.status]);
 
   return (
     <div className={styles.page}>
@@ -29,7 +46,7 @@ export const OrderComplete: React.FC = () => {
             </div>
             <div className={styles.row}>
               <span>ステータス</span>
-              <span className={styles.status}>受付完了</span>
+              <span className={styles.status}>{STATUS_LABEL[order.status] ?? order.status}</span>
             </div>
           </div>
         )}

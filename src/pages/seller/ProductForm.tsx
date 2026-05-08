@@ -11,8 +11,8 @@ import { isValidPrice } from '../../utils/price';
 import styles from './ProductForm.module.css';
 
 const CATEGORIES = ['電子機器', '衣類', '本', 'スポーツ', 'おもちゃ', 'インテリア', '食品', 'その他'];
-const CONDITIONS = ['new', 'like_new', 'good', 'fair'];
-const CONDITION_LABELS: Record<string, string> = { new: '新品', like_new: '新品同様', good: '良い', fair: '普通' };
+const CONDITIONS = ['new', 'like_new', 'good', 'fair', 'vintage', 'junk'];
+const CONDITION_LABELS: Record<string, string> = { new: '新品', like_new: '新品同様', good: '良い', fair: '普通', vintage: 'ビンテージ', junk: '古い（ジャンク）' };
 
 interface ProductFormProps {
   mode: 'new' | 'edit';
