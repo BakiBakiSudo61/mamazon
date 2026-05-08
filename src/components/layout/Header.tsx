@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Search, User, Package, Store, Menu, X, LogOut, ChevronDown, ArrowLeft } from 'lucide-react';
+import { ShoppingCart, Search, User, Package, Store, Menu, X, LogOut, ChevronDown, ArrowLeft, Coins } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore } from '../../stores/cartStore';
 import styles from './Header.module.css';
@@ -83,6 +83,9 @@ export const Header: React.FC = () => {
                     <Link to="/orders" className={styles.dropdownItem}>
                       <Package size={15} /> 注文履歴
                     </Link>
+                    <Link to="/finance" className={styles.dropdownItem}>
+                      <Coins size={15} /> ファイナンス・カジノ
+                    </Link>
                     <Link to="/account" className={styles.dropdownItem}>
                       <User size={15} /> アカウント
                     </Link>
@@ -148,6 +151,9 @@ export const Header: React.FC = () => {
                 <div className={styles.dropdown} onClick={() => setMenuOpen(false)}>
                   <Link to="/orders" className={styles.dropdownItem}>
                     <Package size={15} /> 注文履歴
+                  </Link>
+                  <Link to="/finance" className={styles.dropdownItem}>
+                    <Coins size={15} /> ファイナンス・カジノ
                   </Link>
                   <Link to="/account" className={styles.dropdownItem}>
                     <User size={15} /> アカウント

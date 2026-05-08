@@ -5,6 +5,7 @@ import { handleCart } from './routes/cart';
 import { handleOrders } from './routes/orders';
 import { handleSeller } from './routes/seller';
 import { handleUpload } from './routes/upload';
+import { handleFinance } from './routes/finance';
 import { getSession } from './middleware/auth';
 
 const FALLBACK_ORIGINS = [
@@ -168,6 +169,16 @@ export default {
           const headers = new Headers(uploadRes.headers);
           Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
           return new Response(uploadRes.body, { status: uploadRes.status, headers });
+        }
+      }
+
+      // Finance & Market
+      if (path.startsWith('/finance')) {
+        const financeRes = await handleFinance(path, request, env, session);
+        if (financeRes) {
+          const headers = new Headers(financeRes.headers);
+          Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
+          return new Response(financeRes.body, { status: financeRes.status, headers });
         }
       }
 

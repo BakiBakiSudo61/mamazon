@@ -80,3 +80,14 @@ CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_store ON products(store_id);
 CREATE INDEX IF NOT EXISTS idx_orders_buyer ON orders(buyer_user_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);
+
+-- ユーザー保有アセットテーブル（株・仮想通貨など）
+CREATE TABLE IF NOT EXISTS user_assets (
+  id              TEXT PRIMARY KEY,
+  user_id         TEXT NOT NULL REFERENCES users(id),
+  asset_id        TEXT NOT NULL,
+  quantity        INTEGER NOT NULL DEFAULT 0,
+  avg_buy_price   REAL NOT NULL DEFAULT 0,
+  updated_at      TEXT DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_assets_user_asset ON user_assets(user_id, asset_id);

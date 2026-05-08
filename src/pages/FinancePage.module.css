@@ -1,0 +1,223 @@
+.financeContainer {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: 80vh;
+  color: #fff;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.5rem;
+  text-shadow: 0px 4px 20px rgba(255, 215, 0, 0.3);
+}
+
+.balanceBadge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  padding: 0.5rem 1.5rem;
+  border-radius: 50px;
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #FFD700;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.tabBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #aaa;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.tabBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.tabBtn.active {
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+}
+
+/* Glass Card */
+.glassCard {
+  background: rgba(30, 30, 35, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* High Low */
+.cardDisplay {
+  font-size: 6rem;
+  text-align: center;
+  padding: 2rem;
+  background: #fff;
+  color: #1a1a1a;
+  border-radius: 12px;
+  margin: 1rem auto;
+  width: 150px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.1), 0 10px 20px rgba(0,0,0,0.5);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.cardDisplay.flip {
+  transform: rotateY(360deg);
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.actionBtn {
+  padding: 0.75rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  font-size: 1.1rem;
+}
+.actionBtn:active {
+  transform: scale(0.95);
+}
+.actionBtn.high { background: #10b981; color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); }
+.actionBtn.low { background: #ef4444; color: white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); }
+.actionBtn.spin { background: #f59e0b; color: white; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); width: 100%; font-size: 1.5rem; padding: 1rem; }
+.actionBtn.mine { background: #3b82f6; color: white; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); }
+.actionBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* Slots */
+.slotsMachine {
+  background: #111;
+  padding: 2rem;
+  border-radius: 16px;
+  border: 4px solid #333;
+}
+.reels {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.reel {
+  width: 100px;
+  height: 120px;
+  background: #fff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  box-shadow: inset 0 5px 15px rgba(0,0,0,0.5);
+  border: 2px solid #ddd;
+}
+.reel.spinning {
+  animation: blurReel 0.1s infinite alternate;
+}
+@keyframes blurReel {
+  0% { transform: translateY(-5px); filter: blur(2px); }
+  100% { transform: translateY(5px); filter: blur(2px); }
+}
+
+/* Market */
+.marketGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.assetCard {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: transform 0.3s;
+}
+.assetCard:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.assetHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.assetName { font-size: 1.25rem; font-weight: bold; }
+.assetSymbol { color: #888; font-size: 0.9rem; }
+.assetPrice { font-size: 1.5rem; font-weight: bold; color: #10b981; transition: color 0.3s; }
+.assetPrice.down { color: #ef4444; }
+
+.tradeControls {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.tradeInput {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #fff;
+  padding: 0.5rem;
+  border-radius: 6px;
+  width: 80px;
+}
+.tradeBtn {
+  flex: 1;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.tradeBtn.buy { background: #10b981; color: white; }
+.tradeBtn.sell { background: #ef4444; color: white; }
+.tradeBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.portfolio {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+.portfolioItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
