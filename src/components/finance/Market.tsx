@@ -4,11 +4,15 @@ import { useAuthStore } from '../../stores/authStore';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import styles from './Market.module.css';
 
+const HIST_KEY = 'mamazon_mkt_hist';
+const MAX_HIST = 120; // 2 hours at 1-min intervals
+
 interface Asset {
   id: string;
   name: string;
   type: 'stock' | 'crypto';
   description: string;
+  hasHalving: boolean;
 }
 
 interface PortfolioItem {
@@ -30,10 +34,11 @@ function Sparkline({ data, isUp }: { data: number[]; isUp: boolean }) {
     })
     .join(' ');
   const color = isUp ? '#34d399' : '#f87171';
+  const gradId = `sg-${isUp ? 'up' : 'dn'}`;
   return (
     <svg viewBox="0 0 100 30" preserveAspectRatio="none" className={styles.sparkline}>
       <defs>
-        <linearGradient id={`sg-${isUp}`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.25" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
@@ -55,6 +60,7 @@ export function Market() {
   const { fetchMe } = useAuthStore();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
+  const [halvingDaysLeft, setHalvingDaysLeft] = useState<Record<string, number>>({});
   const [prevPrices, setPrevPrices] = useState<Record<string, number>>({});
   const [priceHistory, setPriceHistory] = useState<Record<string, number[]>>({});
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
@@ -63,11 +69,39 @@ export function Market() {
   const prevPricesRef = useRef<Record<string, number>>({});
   const priceHistoryRef = useRef<Record<string, number[]>>({});
 
+  // Load persisted history from localStorage on mount
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem(HIST_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Record<string, number[]>;
+        priceHistoryRef.current = parsed;
+        setPriceHistory(parsed);
+      }
+    } catch { /* ignore */ }
+
     const init = async () => {
       try {
-        const assetsRes = await api.get<Asset[]>('/finance/market/assets');
+        const [assetsRes, histRes] = await Promise.all([
+          api.get<Asset[]>('/finance/market/assets'),
+          api.get<Record<string, number[]>>('/finance/market/history'),
+        ]);
         setAssets(assetsRes);
+        // Merge server history into local (server provides the past 60 points)
+        const merged = { ...priceHistoryRef.current };
+        Object.entries(histRes).forEach(([id, hist]) => {
+          // If we have local history, append server history points that may be newer
+          const local = merged[id] || [];
+          if (local.length === 0) {
+            merged[id] = hist.slice(-MAX_HIST);
+          } else {
+            // Keep local history (which may have more recent points from polling)
+            merged[id] = [...hist, ...local].slice(-MAX_HIST);
+          }
+        });
+        priceHistoryRef.current = merged;
+        setPriceHistory({ ...merged });
+        try { localStorage.setItem(HIST_KEY, JSON.stringify(merged)); } catch { /* ignore */ }
         fetchPortfolio();
       } catch (err) {
         console.error(err);
@@ -76,29 +110,33 @@ export function Market() {
     init();
   }, []);
 
-  // Fix: use ref for prevPrices to avoid infinite re-render
+  // Price polling every 15 seconds
   useEffect(() => {
     const fetchPrices = async () => {
       try {
-        const p = await api.get<Record<string, number>>('/finance/market/prices');
+        const res = await api.get<{ prices: Record<string, number>; halvingDaysLeft: Record<string, number> }>('/finance/market/prices');
+        const p = res.prices;
         // track history
         const newHist = { ...priceHistoryRef.current };
         Object.entries(p).forEach(([id, price]) => {
-          newHist[id] = [...(newHist[id] || []).slice(-39), price];
+          newHist[id] = [...(newHist[id] || []).slice(-(MAX_HIST - 1)), price];
         });
         priceHistoryRef.current = newHist;
         setPriceHistory({ ...newHist });
+        // Persist to localStorage
+        try { localStorage.setItem(HIST_KEY, JSON.stringify(newHist)); } catch { /* ignore */ }
         setPrevPrices({ ...prevPricesRef.current });
         prevPricesRef.current = p;
         setPrices(p);
+        setHalvingDaysLeft(res.halvingDaysLeft);
       } catch (err) {
         console.error(err);
       }
     };
     fetchPrices();
-    const interval = setInterval(fetchPrices, 3000);
+    const interval = setInterval(fetchPrices, 15000); // every 15 seconds
     return () => clearInterval(interval);
-  }, []); // empty deps — runs once
+  }, []);
 
   const fetchPortfolio = async () => {
     try {
@@ -155,7 +193,13 @@ export function Market() {
                     <span className={`${styles.assetType} ${asset.type === 'crypto' ? styles.crypto : styles.stock}`}>
                       {asset.type === 'crypto' ? '仮想通貨' : '株式'}
                     </span>
+                    {asset.hasHalving && halvingDaysLeft[asset.id] !== undefined && (
+                      <span className={styles.halvingBadge}>
+                        {halvingDaysLeft[asset.id] === 0 ? '🔥 半減期 今日！' : `⚡ 半減期 ${halvingDaysLeft[asset.id]}日`}
+                      </span>
+                    )}
                   </div>
+                  <div className={styles.assetDesc}>{asset.description}</div>
                 </div>
                 <div className={styles.priceBlock}>
                   <div className={`${styles.price} ${isUp ? styles.priceUp : styles.priceDown}`}>

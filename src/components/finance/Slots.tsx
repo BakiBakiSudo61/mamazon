@@ -90,9 +90,9 @@ export function Slots() {
       );
       pendingRef.current = res;
       setResultReady(true);
-      // auto-stop each reel sequentially
+      // auto-stop safety net: only fires if user hasn't stopped manually (8s / 10s / 12s)
       [0, 1, 2].forEach(ri => {
-        autoTimersRef.current[ri] = setTimeout(() => stopCol(ri), 400 + ri * 700);
+        autoTimersRef.current[ri] = setTimeout(() => stopCol(ri), 8000 + ri * 2000);
       });
     } catch {
       spinIntervalsRef.current.forEach(id => id != null && clearInterval(id));

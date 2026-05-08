@@ -84,8 +84,33 @@
 
 .assetMeta {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
   align-items: center;
+  margin-bottom: 0.2rem;
+}
+
+.assetDesc {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: 0.1rem;
+}
+
+.halvingBadge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.15rem 0.5rem;
+  border-radius: 50px;
+  background: rgba(255, 165, 0, 0.15);
+  border: 1px solid rgba(255, 165, 0, 0.4);
+  color: #fbbf24;
+  letter-spacing: 0.03em;
+  animation: halvingPulse 2s ease-in-out infinite;
+}
+
+@keyframes halvingPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 165, 0, 0.3); }
+  50% { box-shadow: 0 0 8px 2px rgba(255, 165, 0, 0.15); }
 }
 
 .assetId {

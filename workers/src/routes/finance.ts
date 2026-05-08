@@ -8,37 +8,75 @@ interface Asset {
   basePrice: number;
   volatility: number;
   description: string;
+  hasHalving?: boolean;
 }
 
 const MARKET_ASSETS: Asset[] = [
-  { id: 'MMZN', name: 'Mamazon', type: 'stock', basePrice: 1000, volatility: 0.1, description: 'Mamazon Official Stock' },
-  { id: 'PEAR', name: 'Pear Inc', type: 'stock', basePrice: 3000, volatility: 0.15, description: 'Tech Giant' },
-  { id: 'MCHD', name: 'Microhard', type: 'stock', basePrice: 2000, volatility: 0.12, description: 'Software Company' },
-  { id: 'MMC', name: 'MamaCoin', type: 'crypto', basePrice: 100, volatility: 0.5, description: 'Native Crypto of Mamazon' },
-  { id: 'BTK', name: 'BitToken', type: 'crypto', basePrice: 5000, volatility: 0.8, description: 'Highly volatile asset' },
+  // ─── 株式 ───────────────────────────────────────────────────────────
+  { id: 'MMZN', name: 'Mamazon Inc',  type: 'stock',  basePrice: 18500,      volatility: 0.12, description: 'EC・クラウドの巨人' },
+  { id: 'PEAR', name: 'Pear Corp',    type: 'stock',  basePrice: 22000,      volatility: 0.10, description: 'プレミアム消費者電子機器' },
+  { id: 'MCHD', name: 'Microhard',    type: 'stock',  basePrice: 41000,      volatility: 0.09, description: 'クラウド・AI・OS' },
+  { id: 'GOGL', name: 'Googol Corp',  type: 'stock',  basePrice: 19500,      volatility: 0.11, description: '検索・広告・クラウド' },
+  { id: 'NVDX', name: 'NvidiaX',      type: 'stock',  basePrice: 148000,     volatility: 0.18, description: 'GPU・AI半導体リーダー' },
+  // ─── 仮想通貨 ────────────────────────────────────────────────────────
+  { id: 'BTK',  name: 'BitToken',     type: 'crypto', basePrice: 14000000,   volatility: 0.35, description: 'デジタルゴールド。30日周期の半減期あり', hasHalving: true },
+  { id: 'ETB',  name: 'EtherBlast',   type: 'crypto', basePrice: 380000,     volatility: 0.45, description: 'スマートコントラクト基盤' },
+  { id: 'SLC',  name: 'SolarChain',   type: 'crypto', basePrice: 22000,      volatility: 0.65, description: '超高速ブロックチェーン' },
+  { id: 'DMC',  name: 'DogeMeme',     type: 'crypto', basePrice: 30,         volatility: 1.20, description: 'ミームコイン。予測不能な急騰急落' },
+  { id: 'MMC',  name: 'MamaCoin',     type: 'crypto', basePrice: 100,        volatility: 0.50, description: 'Mamazon独自仮想通貨' },
+  { id: 'PPC',  name: 'PepeChain',    type: 'crypto', basePrice: 15,         volatility: 2.00, description: '伝説のミームコイン。ただ暴れる' },
 ];
+
+/** Wang hash — deterministic pseudo-random 0..1 from any 32-bit integer */
+function wang32(n: number): number {
+  n = n | 0;
+  n = ((n >>> 16) ^ n) * 0x45d9f3b | 0;
+  n = ((n >>> 16) ^ n) * 0x45d9f3b | 0;
+  n = (n >>> 16) ^ n;
+  return (n >>> 0) / 4294967296;
+}
 
 // Helper to calculate price pseudo-randomly based on time
 function getPriceAtTime(asset: Asset, time: number): number {
-  // Use time grouped by 10 seconds so price is stable for a brief window
-  const timeWindow = Math.floor(time / 10000);
-  
-  // Create a pseudo-random seed based on asset id and time window
-  let seed = 0;
-  for (let i = 0; i < asset.id.length; i++) {
-    seed += asset.id.charCodeAt(i);
-  }
-  
-  // Sine waves for smooth trends
-  const trend = Math.sin(timeWindow / 100 + seed) + Math.cos(timeWindow / 50 + seed);
-  
-  // Noise for short term spikes
-  const noiseSeed = (timeWindow * seed * 1103515245 + 12345) % 2147483648;
-  const noise = (noiseSeed / 2147483648) * 2 - 1; // -1 to 1
+  // Derive per-asset seed from id
+  let baseSeed = 0;
+  for (let i = 0; i < asset.id.length; i++) baseSeed = (baseSeed * 31 + asset.id.charCodeAt(i)) | 0;
 
-  const priceMultiplier = 1 + (trend * 0.5 + noise * 0.5) * asset.volatility;
-  
-  return Math.max(1, Math.floor(asset.basePrice * priceMultiplier));
+  const phaseOffset = wang32(baseSeed) * Math.PI * 2;
+  const t = time / 1000; // seconds
+
+  // Multi-period trend (sine waves at different timescales)
+  const trend =
+    Math.sin(t / (86400 * 30) * Math.PI * 2 + phaseOffset) * 0.35 +        // monthly
+    Math.cos(t / (86400 * 14) * Math.PI * 2 + phaseOffset * 1.4) * 0.18 +  // bi-weekly
+    Math.sin(t / (86400 *  7) * Math.PI * 2 + phaseOffset * 2.1) * 0.20 +  // weekly
+    Math.sin(t / (86400 *  3) * Math.PI * 2 + phaseOffset * 5.2) * 0.15 +  // 3-day
+    Math.sin(t /  86400       * Math.PI * 2 + phaseOffset * 3.7) * 0.12;   // daily
+
+  // Per-window noise (1 min for crypto, 5 min for stocks)
+  const windowMs = asset.type === 'crypto' ? 60_000 : 300_000;
+  const w = Math.floor(time / windowMs) | 0;
+  const noise = (wang32((w * 997 + baseSeed) | 0) - 0.5) * 0.5;
+
+  let mult = 1 + (trend + noise) * asset.volatility;
+  mult = Math.max(0.15, Math.min(6, mult));
+
+  let price = Math.round(asset.basePrice * mult);
+
+  // Halving effect for BTK: 30-day cycle
+  if (asset.hasHalving) {
+    const halvingCycleMs = 30 * 24 * 60 * 60 * 1000;
+    const phase = (time % halvingCycleMs) / halvingCycleMs;
+    if (phase > 0.80) {
+      // Pre-halving pump: up to +80% in last 20% of cycle
+      price = Math.round(price * (1 + ((phase - 0.80) / 0.20) * 0.80));
+    } else if (phase < 0.15) {
+      // Post-halving momentum: up to +40% in first 15%
+      price = Math.round(price * (1 + ((0.15 - phase) / 0.15) * 0.40));
+    }
+  }
+
+  return Math.max(1, price);
 }
 
 function json(data: unknown, status = 200) {
@@ -279,17 +317,38 @@ export async function handleFinance(path: string, request: Request, env: Env, se
     
     // --- Market: Assets Info ---
     if (path === '/finance/market/assets') {
-      return json(MARKET_ASSETS);
+      return json(MARKET_ASSETS.map(({ id, name, type, description, hasHalving }) => ({ id, name, type, description, hasHalving: hasHalving ?? false })));
     }
 
     // --- Market: Prices ---
     if (path === '/finance/market/prices') {
       const time = Date.now();
-      const prices = MARKET_ASSETS.reduce((acc, asset) => {
-        acc[asset.id] = getPriceAtTime(asset, time);
-        return acc;
-      }, {} as Record<string, number>);
-      return json(prices);
+      const prices: Record<string, number> = {};
+      const halvingDaysLeft: Record<string, number> = {};
+      MARKET_ASSETS.forEach(asset => {
+        prices[asset.id] = getPriceAtTime(asset, time);
+        if (asset.hasHalving) {
+          const halvingCycleMs = 30 * 24 * 60 * 60 * 1000;
+          const msLeft = halvingCycleMs - (time % halvingCycleMs);
+          halvingDaysLeft[asset.id] = Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000)));
+        }
+      });
+      return json({ prices, halvingDaysLeft });
+    }
+
+    // --- Market: History (last 60 data points, 1-min intervals) ---
+    if (path === '/finance/market/history') {
+      const time = Date.now();
+      const windowMs = 60_000; // 1 minute per point
+      const points = 60;
+      const history: Record<string, number[]> = {};
+      MARKET_ASSETS.forEach(asset => {
+        history[asset.id] = [];
+        for (let i = points - 1; i >= 0; i--) {
+          history[asset.id].push(getPriceAtTime(asset, time - i * windowMs));
+        }
+      });
+      return json(history);
     }
 
     // --- Market: Portfolio ---
