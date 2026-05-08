@@ -146,10 +146,11 @@ export async function handleOrders(
     const orderId = returnMatch[1];
     const order = await env.DB.prepare(
       'SELECT * FROM orders WHERE id = ? AND buyer_user_id = ?'
-    ).bind(orderId, session.userId).first<{ id: string; status: string; total_amount: string; buyer_user_id: string }>();
+    ).bind(orderId, session.userId).first<{ id: string; status: string; total_amount: string; buyer_user_id: string; created_at: string }>();
 
     if (!order) return json({ error: '注文が見つかりません' }, 404);
-    if (order.status !== 'delivered') {
+    const computedStatus = computeStatus(order.status, order.created_at);
+    if (computedStatus !== 'delivered') {
       return json({ error: '配達完了後の注文のみ返品できます' }, 400);
     }
 
