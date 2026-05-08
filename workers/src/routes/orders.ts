@@ -10,10 +10,12 @@ function json(data: unknown, status = 200) {
 /** 注文作成からの経過秒数でステータスを自動進行する（返品済みはそのまま） */
 function computeStatus(dbStatus: string, createdAt: string): string {
   if (dbStatus === 'returned') return 'returned';
-  const elapsed = (Date.now() - new Date(createdAt + 'Z').getTime()) / 1000;
-  if (elapsed < 5)  return 'ordered';
-  if (elapsed < 10) return 'preparing';
-  if (elapsed < 18) return 'shipped';
+  // SQLite は "YYYY-MM-DD HH:MM:SS" 形式で保存するため T+Z に変換
+  const isoStr = createdAt.replace(' ', 'T') + 'Z';
+  const elapsed = (Date.now() - new Date(isoStr).getTime()) / 1000;
+  if (elapsed < 1)   return 'ordered';
+  if (elapsed < 2.5) return 'preparing';
+  if (elapsed < 4)   return 'shipped';
   return 'delivered';
 }
 

@@ -46,12 +46,12 @@ export const OrderDetail: React.FC = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // 配達完了 / 返品済みになるまで2秒ごとに自動更新
+  // 配達完了 / 返品済みになるまで 500ms ごとに自動更新
   useEffect(() => {
     if (!order || order.status === 'delivered' || order.status === 'returned') return;
     const timer = setInterval(() => {
       ordersApi.get(order.id).then(setOrder).catch(() => {});
-    }, 2000);
+    }, 500);
     return () => clearInterval(timer);
   }, [order?.id, order?.status]);
 
