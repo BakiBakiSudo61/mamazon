@@ -12,8 +12,8 @@ export function Slots() {
   const [message, setMessage] = useState('スピンを押して運試し！ (最大50倍)');
 
   const spin = async () => {
-    if (betAmount <= 0 || betAmount > (user?.balance || 0)) {
-      setMessage('無効なベット額です。残高を確認してください。');
+    if (betAmount <= 0 || betAmount > (user?.finance_balance ?? 0)) {
+      setMessage('無効なベット金額です。ファイナンス残高を確認してください。');
       return;
     }
     

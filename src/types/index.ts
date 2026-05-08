@@ -6,6 +6,7 @@ export interface User {
   address_json?: string;
   role: 'buyer' | 'seller' | 'both';
   balance: number;
+  finance_balance: number;
   created_at: string;
 }
 

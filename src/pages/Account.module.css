@@ -100,3 +100,26 @@
 }
 .sellerCta h3 { margin: 0; font-size: 1rem; }
 .sellerCta p { margin: 0; font-size: 0.88rem; color: var(--text-muted); }
+
+.financeCard {
+  background: linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(168,85,247,0.12) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.2s, transform 0.15s;
+}
+.financeCard:hover {
+  background: linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(168,85,247,0.2) 100%);
+  transform: translateY(-2px);
+}
+.financeCardArrow {
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+}

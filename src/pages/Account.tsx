@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { User, Wallet, Store, Edit, Camera } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { User, Wallet, Store, Edit, Camera, Coins } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
 import { api } from '../api/client';
@@ -125,6 +126,17 @@ export const Account: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <Link to="/finance" className={styles.financeCard}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+            <Coins size={24} className={styles.statIcon} />
+            <div>
+              <p className={styles.statLabel}>ファイナンス残高 (カジノ・マーケット)</p>
+              <p className={styles.statValue}>¥{(user.finance_balance ?? 0).toLocaleString()}</p>
+            </div>
+          </div>
+          <span className={styles.financeCardArrow}>カジノ・マーケットを開く →</span>
+        </Link>
 
         {user.role === 'buyer' && (
           <div className={styles.sellerCta}>

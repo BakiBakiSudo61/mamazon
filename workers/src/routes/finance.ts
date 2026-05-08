@@ -48,8 +48,8 @@ function json(data: unknown, status = 200) {
   });
 }
 
-// Auto-migrate helper for local dev convenience
-async function ensureUserAssetsTable(env: Env) {
+// Auto-migrate helper
+async function ensureSchema(env: Env) {
   try {
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS user_assets (
@@ -64,14 +64,15 @@ async function ensureUserAssetsTable(env: Env) {
     await env.DB.prepare(`
       CREATE UNIQUE INDEX IF NOT EXISTS idx_user_assets_user_asset ON user_assets(user_id, asset_id)
     `).run();
-  } catch (e) {
-    // Ignore, might already exist or be restricted
-  }
+  } catch (_) { /* already exists */ }
+  try {
+    await env.DB.prepare(`ALTER TABLE users ADD COLUMN finance_balance TEXT DEFAULT '10000'`).run();
+  } catch (_) { /* column already exists */ }
 }
 
 export async function handleFinance(path: string, request: Request, env: Env, session: { userId: string } | null): Promise<Response | null> {
-  // Ensure tables exist
-  await ensureUserAssetsTable(env);
+  // Ensure schema
+  await ensureSchema(env);
 
   if (!session) {
     return json({ error: '認証が必要です' }, 401);
@@ -85,9 +86,10 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       const { amount, guess, currentCard } = await request.json() as { amount: number, guess: 'high' | 'low', currentCard: number };
       if (amount <= 0) return json({ error: '無効な金額です' }, 400);
 
-      const user = await env.DB.prepare('SELECT balance FROM users WHERE id = ?').bind(userId).first<{ balance: string }>();
-      if (!user || parseInt(user.balance) < amount) {
-        return json({ error: '残高が不足しています' }, 400);
+      const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
+      const finBal = parseInt(user?.finance_balance || '0');
+      if (!user || finBal < amount) {
+        return json({ error: 'ファイナンス残高が不足しています' }, 400);
       }
 
       // Draw a new card (1-13)
@@ -103,18 +105,18 @@ export async function handleFinance(path: string, request: Request, env: Env, se
         win = true;
       }
 
-      let newBalance = parseInt(user.balance);
+      let newBalance = finBal;
       let payout = 0;
       if (win) {
         payout = amount * 2;
-        newBalance += amount; // won original amount
+        newBalance += amount;
       } else if (draw) {
-        payout = amount; // kept original amount
+        payout = amount;
       } else {
-        newBalance -= amount; // lost amount
+        newBalance -= amount;
       }
 
-      await env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
+      await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
       return json({ newCard, result: win ? 'win' : draw ? 'draw' : 'lose', payout, newBalance });
     }
@@ -124,9 +126,10 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       const { amount } = await request.json() as { amount: number };
       if (amount <= 0) return json({ error: '無効な金額です' }, 400);
 
-      const user = await env.DB.prepare('SELECT balance FROM users WHERE id = ?').bind(userId).first<{ balance: string }>();
-      if (!user || parseInt(user.balance) < amount) {
-        return json({ error: '残高が不足しています' }, 400);
+      const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
+      const finBal = parseInt(user?.finance_balance || '0');
+      if (!user || finBal < amount) {
+        return json({ error: 'ファイナンス残高が不足しています' }, 400);
       }
 
       const symbols = ['🍎', '🍇', '🍒', '🔔', '💎', '7️⃣'];
@@ -143,20 +146,20 @@ export async function handleFinance(path: string, request: Request, env: Env, se
         multiplier = 2;
       }
 
-      let newBalance = parseInt(user.balance) - amount + (amount * multiplier);
-      await env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
+      const newBalance = finBal - amount + (amount * multiplier);
+      await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
       return json({ reels: [reel1, reel2, reel3], multiplier, payout: amount * multiplier, newBalance });
     }
 
     // --- Mine Crypto ---
     if (path === '/finance/mine') {
-      const user = await env.DB.prepare('SELECT balance FROM users WHERE id = ?').bind(userId).first<{ balance: string }>();
+      const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
       if (!user) return json({ error: 'ユーザーが見つかりません' }, 404);
 
-      const minedAmount = Math.floor(Math.random() * 401) + 100; // 100 ~ 500 yen
-      const newBalance = parseInt(user.balance) + minedAmount;
-      await env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
+      const minedAmount = Math.floor(Math.random() * 401) + 100; // 100 ~ 500
+      const newBalance = parseInt(user.finance_balance || '0') + minedAmount;
+      await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
       return json({ minedAmount, newBalance });
     }
@@ -170,9 +173,10 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       const currentPrice = getPriceAtTime(asset, Date.now());
       const totalCost = currentPrice * quantity;
 
-      const user = await env.DB.prepare('SELECT balance FROM users WHERE id = ?').bind(userId).first<{ balance: string }>();
-      if (!user || parseInt(user.balance) < totalCost) {
-        return json({ error: '残高が不足しています' }, 400);
+      const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
+      const finBal = parseInt(user?.finance_balance || '0');
+      if (!user || finBal < totalCost) {
+        return json({ error: 'ファイナンス残高が不足しています' }, 400);
       }
 
       // Check existing portfolio
@@ -189,8 +193,8 @@ export async function handleFinance(path: string, request: Request, env: Env, se
           .bind(id, userId, assetId, quantity, currentPrice).run();
       }
 
-      const newBalance = parseInt(user.balance) - totalCost;
-      await env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
+      const newBalance = finBal - totalCost;
+      await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
       return json({ success: true, newBalance, assetId, quantity, price: currentPrice });
     }
@@ -216,11 +220,34 @@ export async function handleFinance(path: string, request: Request, env: Env, se
         await env.DB.prepare('UPDATE user_assets SET quantity = ? WHERE user_id = ? AND asset_id = ?').bind(newQuantity, userId, assetId).run();
       }
 
-      const user = await env.DB.prepare('SELECT balance FROM users WHERE id = ?').bind(userId).first<{ balance: string }>();
-      const newBalance = parseInt(user?.balance || '0') + totalEarned;
-      await env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
+      const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
+      const newBalance = parseInt(user?.finance_balance || '0') + totalEarned;
+      await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
       return json({ success: true, newBalance, assetId, quantity, price: currentPrice, earned: totalEarned });
+    }
+
+    // --- Convert Finance Balance → Mamazon Shopping Balance ---
+    if (path === '/finance/convert') {
+      const { amount } = await request.json() as { amount: number };
+      if (amount <= 0) return json({ error: '無効な金額です' }, 400);
+
+      const user = await env.DB.prepare('SELECT balance, finance_balance FROM users WHERE id = ?')
+        .bind(userId).first<{ balance: string; finance_balance: string }>();
+      if (!user) return json({ error: 'ユーザーが見つかりません' }, 404);
+
+      const finBal = parseInt(user.finance_balance || '0');
+      if (finBal < amount) {
+        return json({ error: 'ファイナンス残高が不足しています' }, 400);
+      }
+
+      const newFinanceBalance = finBal - amount;
+      const newShoppingBalance = parseInt(user.balance || '0') + amount;
+
+      await env.DB.prepare('UPDATE users SET balance = ?, finance_balance = ? WHERE id = ?')
+        .bind(newShoppingBalance.toString(), newFinanceBalance.toString(), userId).run();
+
+      return json({ success: true, newBalance: newShoppingBalance, newFinanceBalance });
     }
   } else if (request.method === 'GET') {
     
