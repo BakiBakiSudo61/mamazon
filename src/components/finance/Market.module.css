@@ -1,0 +1,273 @@
+﻿.market {
+  padding-bottom: 2rem;
+}
+
+.marketHeader {
+  margin-bottom: 1.5rem;
+}
+
+.marketTitle {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 0.25rem;
+}
+
+.marketSubtitle {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+/* Messages */
+.msg {
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.msgSuccess {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.msgError {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Asset grid */
+.assetGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.assetCard {
+  background: rgba(15, 15, 28, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
+  backdrop-filter: blur(8px);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.assetCard:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.assetTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.assetName {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #fff;
+  margin-bottom: 0.25rem;
+}
+
+.assetMeta {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.assetId {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+}
+
+.assetType {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 50px;
+  letter-spacing: 0.04em;
+}
+
+.crypto {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  color: #c084fc;
+}
+
+.stock {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
+}
+
+/* Price */
+.priceBlock {
+  text-align: right;
+}
+
+.price {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-family: 'Courier New', monospace;
+  letter-spacing: -0.02em;
+}
+
+.priceUp { color: #34d399; }
+.priceDown { color: #f87171; }
+
+.priceDiff {
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.2rem;
+  margin-top: 0.15rem;
+}
+
+.diffUp { color: #10b981; }
+.diffDown { color: #ef4444; }
+
+/* Trade row */
+.tradeRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.tradeInput {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  outline: none;
+  min-width: 0;
+}
+
+.tradeInput:focus {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.tradeBtn {
+  padding: 0.45rem 0.875rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.tradeBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.buy {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+.buy:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.35);
+}
+
+.sell {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+.sell:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.28);
+}
+
+/* Portfolio */
+.portfolio {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  padding: 1.25rem;
+}
+
+.portfolioTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 1rem;
+}
+
+.emptyNote {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.88rem;
+  margin: 0;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.portfolioList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.portfolioItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.pfName {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+  margin-bottom: 0.2rem;
+}
+
+.pfMeta {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.pfValues {
+  text-align: right;
+}
+
+.pfValue {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+  margin-bottom: 0.15rem;
+}
+
+.pfProfit {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.profitUp { color: #34d399; }
+.profitDown { color: #f87171; }

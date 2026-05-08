@@ -1,246 +1,374 @@
-.financeContainer {
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  min-height: 80vh;
-  color: #fff;
+﻿.page {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 60% 0%, #1a0a3e 0%, #09090f 60%, #000 100%);
+  position: relative;
+  overflow: hidden;
+  padding-bottom: 4rem;
 }
 
-.header {
+.orb1 {
+  position: fixed;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(100, 30, 200, 0.2) 0%, transparent 70%);
+  top: -200px;
+  left: -150px;
+  pointer-events: none;
+  animation: orbFloat 10s ease-in-out infinite;
+}
+
+.orb2 {
+  position: fixed;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%);
+  bottom: -100px;
+  right: -100px;
+  pointer-events: none;
+  animation: orbFloat 14s ease-in-out infinite reverse;
+}
+
+@keyframes orbFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-30px) scale(1.04); }
+}
+
+.inner {
+  position: relative;
+  z-index: 10;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem;
+}
+
+.titleSection {
   text-align: center;
   margin-bottom: 2rem;
 }
 
 .title {
-  font-size: 2.5rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%);
+  font-size: 2rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 60%, #FF6B00 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 0.5rem;
-  text-shadow: 0px 4px 20px rgba(255, 215, 0, 0.3);
+  margin: 0 0 0.4rem;
+  letter-spacing: 0.04em;
 }
 
-.balanceBadge {
-  display: inline-block;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 0.5rem 1.5rem;
-  border-radius: 50px;
-  border: 1px solid rgba(255, 215, 0, 0.5);
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #FFD700;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+.subtitle {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.95rem;
+  margin: 0;
 }
 
-.tabs {
+.balanceGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.balanceCard {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 1.25rem;
   display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  align-items: center;
+  gap: 0.75rem;
+  backdrop-filter: blur(8px);
 }
 
-.tabBtn {
+.financeBalanceCard {
+  background: rgba(255, 215, 0, 0.05);
+  border-color: rgba(255, 215, 0, 0.2);
+}
+
+.balanceIcon {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.balanceLabel {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 0.2rem;
+}
+
+.balanceAmount {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.financeBalanceCard .balanceAmount {
+  color: #FFD700;
+}
+
+.convertCard {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  backdrop-filter: blur(8px);
+}
+
+.convertTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0 0 1rem;
+}
+
+.directionToggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.875rem;
+}
+
+.dirBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #aaa;
-  padding: 0.75rem 2rem;
-  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 0.5rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
-.tabBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
+.dirBtn:hover {
   color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
-.tabBtn.active {
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+.dirActive {
+  background: rgba(255, 215, 0, 0.12);
+  border-color: rgba(255, 215, 0, 0.5);
+  color: #FFD700;
 }
 
-/* Glass Card */
-.glassCard {
-  background: rgba(30, 30, 35, 0.8);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-/* High Low */
-.cardDisplay {
-  font-size: 6rem;
-  text-align: center;
-  padding: 2rem;
-  background: #fff;
-  color: #1a1a1a;
-  border-radius: 12px;
-  margin: 1rem auto;
-  width: 150px;
-  height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: inset 0 0 10px rgba(0,0,0,0.1), 0 10px 20px rgba(0,0,0,0.5);
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.cardDisplay.flip {
-  transform: rotateY(360deg);
-}
-
-.controls {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  margin-top: 1.5rem;
-}
-
-.actionBtn {
-  padding: 0.75rem 2rem;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  font-size: 1.1rem;
-}
-.actionBtn:active {
-  transform: scale(0.95);
-}
-.actionBtn.high { background: #10b981; color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); }
-.actionBtn.low { background: #ef4444; color: white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); }
-.actionBtn.spin { background: #f59e0b; color: white; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); width: 100%; font-size: 1.5rem; padding: 1rem; }
-.actionBtn.mine { background: #3b82f6; color: white; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); }
-.actionBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-
-/* Slots */
-.slotsMachine {
-  background: #111;
-  padding: 2rem;
-  border-radius: 16px;
-  border: 4px solid #333;
-}
-.reels {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-.reel {
-  width: 100px;
-  height: 120px;
-  background: #fff;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 4rem;
-  box-shadow: inset 0 5px 15px rgba(0,0,0,0.5);
-  border: 2px solid #ddd;
-}
-.reel.spinning {
-  animation: blurReel 0.1s infinite alternate;
-}
-@keyframes blurReel {
-  0% { transform: translateY(-5px); filter: blur(2px); }
-  100% { transform: translateY(5px); filter: blur(2px); }
-}
-
-/* Market */
-.marketGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
-
-.assetCard {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 1.5rem;
-  transition: transform 0.3s;
-}
-.assetCard:hover {
-  transform: translateY(-5px);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.assetHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-.assetName { font-size: 1.25rem; font-weight: bold; }
-.assetSymbol { color: #888; font-size: 0.9rem; }
-.assetPrice { font-size: 1.5rem; font-weight: bold; color: #10b981; transition: color 0.3s; }
-.assetPrice.down { color: #ef4444; }
-
-.tradeControls {
+.convertInputRow {
   display: flex;
   gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.tradeInput {
-  background: rgba(0,0,0,0.2);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #fff;
-  padding: 0.5rem;
-  border-radius: 6px;
-  width: 80px;
-}
-.tradeBtn {
-  flex: 1;
-  padding: 0.5rem;
-  border: none;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-}
-.tradeBtn.buy { background: #10b981; color: white; }
-.tradeBtn.sell { background: #ef4444; color: white; }
-.tradeBtn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.portfolio {
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid rgba(255,255,255,0.1);
-}
-.portfolioItem {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-}
-
-/* Convert Section */
-.convertSection {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 215, 0, 0.2);
-  border-radius: 12px;
-  padding: 1.25rem 1.5rem;
-  margin-top: 0.5rem;
-  text-align: center;
-}
-.convertTitle {
-  color: #FFD700;
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0 0 0.85rem;
-}
-.convertControls {
-  display: flex;
-  gap: 0.75rem;
-  justify-content: center;
   align-items: center;
-  flex-wrap: wrap;
+}
+
+.convertInput {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  padding: 0.6rem 0.875rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  outline: none;
+  min-width: 0;
+}
+
+.convertInput:focus {
+  border-color: rgba(255, 215, 0, 0.4);
+}
+
+.maxBtn {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.6);
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.maxBtn:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.convertBtn {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  border: none;
+  color: #fff;
+  padding: 0.6rem 1.25rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.convertBtn:hover:not(:disabled) {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+  transform: translateY(-1px);
+}
+
+.convertBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.msg {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.875rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  animation: fadeIn 0.3s ease;
+}
+
+.msgSuccess {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+
+.msgError {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mineSection {
+  margin-bottom: 1.5rem;
+}
+
+.mineBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.55);
+  padding: 0.75rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mineBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.mineBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.navGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.navCard {
+  position: relative;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 20px;
+  padding: 1.75rem 1.25rem;
+  text-decoration: none;
+  overflow: hidden;
+  transition: all 0.25s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.navCard:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.navCardBgPurple {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 70% 20%, rgba(120, 40, 200, 0.35) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.navCardBgGreen {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 70% 20%, rgba(16, 185, 129, 0.28) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.navCardIcon {
+  font-size: 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+.navCardTitle {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #fff;
+  position: relative;
+  z-index: 1;
+}
+
+.navCardDesc {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+  position: relative;
+  z-index: 1;
+}
+
+.navCardArrow {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.3);
+  position: absolute;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 1;
+  transition: transform 0.2s, color 0.2s;
+}
+
+.navCard:hover .navCardArrow {
+  transform: translateX(4px);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+@media (max-width: 480px) {
+  .balanceGrid,
+  .navGrid {
+    grid-template-columns: 1fr;
+  }
+  .directionToggle {
+    grid-template-columns: 1fr;
+  }
 }

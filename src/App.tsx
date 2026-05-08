@@ -20,6 +20,8 @@ import { SellerRegister } from './pages/seller/SellerRegister';
 import { Dashboard } from './pages/seller/Dashboard';
 import { ProductForm } from './pages/seller/ProductForm';
 import { FinancePage } from './pages/FinancePage';
+import { CasinoPage } from './pages/CasinoPage';
+import { MarketPage } from './pages/MarketPage';
 
 const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, initialized } = useAuthStore();
@@ -67,6 +69,8 @@ const AppRoutes: React.FC = () => {
       <Route path="/orders/:id" element={<Layout><RequireAuth><OrderDetail /></RequireAuth></Layout>} />
       <Route path="/account" element={<Layout><RequireAuth><Account /></RequireAuth></Layout>} />
       <Route path="/finance" element={<Layout><RequireAuth><FinancePage /></RequireAuth></Layout>} />
+      <Route path="/finance/casino" element={<RequireAuth><CasinoPage /></RequireAuth>} />
+      <Route path="/finance/market" element={<Layout><RequireAuth><MarketPage /></RequireAuth></Layout>} />
       <Route path="/seller/register" element={<Layout><RequireAuth><SellerRegister /></RequireAuth></Layout>} />
       <Route path="/seller/dashboard" element={<Layout><RequireSeller><Dashboard /></RequireSeller></Layout>} />
       <Route path="/seller/product/new" element={<Layout><RequireSeller><ProductForm mode="new" /></RequireSeller></Layout>} />

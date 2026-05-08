@@ -1,0 +1,270 @@
+﻿.game {
+  background: rgba(8, 4, 18, 0.75);
+  border: 1px solid rgba(255, 215, 0, 0.18);
+  border-radius: 22px;
+  padding: 2rem 1.75rem 1.75rem;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    0 8px 48px rgba(0, 0, 0, 0.6),
+    0 0 60px rgba(90, 20, 200, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.title {
+  text-align: center;
+  font-size: 1.75rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0 0 0.3rem;
+  filter: drop-shadow(0 0 8px rgba(255, 165, 0, 0.3));
+}
+
+.desc {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.88rem;
+  margin: 0 0 1.5rem;
+}
+
+.desc strong {
+  color: rgba(255, 215, 0, 0.8);
+}
+
+/* === Playing Card === */
+.cardArea {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+  perspective: 900px;
+}
+
+.card {
+  width: 148px;
+  height: 208px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, #ffffff 0%, #f2f2f2 100%);
+  position: relative;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(0, 0, 0, 0.1),
+    0 0 35px rgba(255, 215, 0, 0.18);
+  transform-origin: center center;
+}
+
+.card.red .cornerTL,
+.card.red .cornerBR,
+.card.red .centerSuit {
+  color: #dc2626;
+}
+
+.card.black .cornerTL,
+.card.black .cornerBR,
+.card.black .centerSuit {
+  color: #111827;
+}
+
+.cornerTL {
+  position: absolute;
+  top: 9px;
+  left: 11px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.15;
+  font-size: 1.05rem;
+  font-weight: 900;
+  font-family: 'Georgia', serif;
+}
+
+.cornerBR {
+  position: absolute;
+  bottom: 9px;
+  right: 11px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.15;
+  font-size: 1.05rem;
+  font-weight: 900;
+  font-family: 'Georgia', serif;
+  transform: rotate(180deg);
+}
+
+.centerSuit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 3.8rem;
+  line-height: 1;
+}
+
+/* Card flip animation */
+@keyframes cardFlip {
+  0%   { transform: rotateY(0deg) scale(1); }
+  25%  { transform: rotateY(90deg) scale(0.88); filter: brightness(0.6); }
+  75%  { transform: rotateY(-90deg) scale(0.88); filter: brightness(0.6); }
+  100% { transform: rotateY(0deg) scale(1); filter: brightness(1); }
+}
+
+.flipping {
+  animation: cardFlip 0.75s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+}
+
+/* === Result === */
+.result {
+  text-align: center;
+  padding: 0.7rem 1rem;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 1.05rem;
+  margin-bottom: 1.25rem;
+  animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.win {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #34d399;
+}
+
+.draw {
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  color: #fbbf24;
+}
+
+.lose {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(0.85) translateY(-8px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* === Chip Buttons === */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1.1rem;
+}
+
+.chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 215, 0, 0.25);
+  color: rgba(255, 215, 0, 0.8);
+  padding: 0.38rem 0.9rem;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 0.83rem;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.chip:hover {
+  background: rgba(255, 215, 0, 0.12);
+  border-color: rgba(255, 215, 0, 0.55);
+  color: #FFD700;
+}
+
+.chipActive {
+  background: rgba(255, 215, 0, 0.2);
+  border-color: #FFD700;
+  color: #FFD700;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.25);
+}
+
+.betInput {
+  width: 86px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  color: #fff;
+  padding: 0.38rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  text-align: center;
+  outline: none;
+}
+
+.betInput:focus {
+  border-color: rgba(255, 215, 0, 0.4);
+}
+
+/* === Action Buttons === */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.btn {
+  padding: 0.9rem;
+  border: none;
+  border-radius: 13px;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  transition: all 0.2s;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.high {
+  background: linear-gradient(135deg, #047857, #10b981);
+  color: #fff;
+  box-shadow: 0 4px 24px rgba(16, 185, 129, 0.38);
+}
+
+.high:hover:not(:disabled) {
+  box-shadow: 0 4px 32px rgba(16, 185, 129, 0.58);
+  transform: translateY(-2px);
+}
+
+.low {
+  background: linear-gradient(135deg, #b91c1c, #ef4444);
+  color: #fff;
+  box-shadow: 0 4px 24px rgba(239, 68, 68, 0.38);
+}
+
+.low:hover:not(:disabled) {
+  box-shadow: 0 4px 32px rgba(239, 68, 68, 0.58);
+  transform: translateY(-2px);
+}
+
+.balanceNote {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.spin {
+  animation: spinIcon 0.8s linear infinite;
+}
+
+@keyframes spinIcon {
+  to { transform: rotate(360deg); }
+}

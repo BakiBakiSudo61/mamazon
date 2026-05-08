@@ -1,95 +1,118 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
-import styles from '../../pages/FinancePage.module.css';
-import { Coins, Loader } from 'lucide-react';
+import { Loader } from 'lucide-react';
+import styles from './HighLow.module.css';
+
+const CARD_LABELS: Record<number, string> = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' };
+const SUITS = ['♠', '♣', '♥', '♦'];
+
+function getLabel(n: number) { return CARD_LABELS[n] ?? String(n); }
+function getSuit(n: number) { return SUITS[(n - 1) % 4]; }
+function isRed(suit: string) { return suit === '♥' || suit === '♦'; }
+
+const BET_PRESETS = [100, 500, 1000, 5000];
 
 export function HighLow() {
   const { user, fetchMe } = useAuthStore();
   const [betAmount, setBetAmount] = useState(100);
   const [currentCard, setCurrentCard] = useState(7);
-  const [message, setMessage] = useState('次のカードはこれより高い？低い？');
+  const [currentSuit, setCurrentSuit] = useState('♠');
+  const [result, setResult] = useState<'win' | 'draw' | 'lose' | null>(null);
+  const [payout, setPayout] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [isFlipping, setIsFlipping] = useState(false);
+  const [flipping, setFlipping] = useState(false);
 
   const play = async (guess: 'high' | 'low') => {
-    if (betAmount <= 0 || betAmount > (user?.finance_balance ?? 0)) {
-      setMessage('無効なベット金額です。ファイナンス残高を確認してください。');
-      return;
-    }
+    const bal = user?.finance_balance ?? 0;
+    if (betAmount <= 0 || betAmount > bal || loading) return;
     setLoading(true);
-    setIsFlipping(true);
-
+    setResult(null);
     try {
-      const res = await api.post<{ newCard: number, result: string, payout: number }>('/finance/gamble/highlow', {
-        amount: betAmount,
-        guess,
-        currentCard
-      });
-
-      // Quick visual delay for flip animation
-      setTimeout(async () => {
+      const res = await api.post<{ newCard: number; result: string; payout: number }>(
+        '/finance/gamble/highlow', { amount: betAmount, guess, currentCard }
+      );
+      // Start flip animation after API responds
+      setFlipping(true);
+      setTimeout(() => {
         setCurrentCard(res.newCard);
-        if (res.result === 'win') {
-          setMessage(`🎉 おめでとう！ ${res.payout}円 獲得しました！`);
-        } else if (res.result === 'draw') {
-          setMessage('引き分け！ ベット額が返還されました。');
-        } else {
-          setMessage('😭 残念... ハズレです。');
-        }
-        await fetchMe(); // Refresh balance
-        setIsFlipping(false);
+        setCurrentSuit(getSuit(res.newCard));
+        setResult(res.result as 'win' | 'draw' | 'lose');
+        setPayout(res.payout);
+      }, 320);
+      setTimeout(() => {
+        setFlipping(false);
         setLoading(false);
-      }, 500);
-
-    } catch (err: any) {
-      setMessage(err.message || 'エラーが発生しました');
-      setIsFlipping(false);
+        fetchMe();
+      }, 750);
+    } catch {
       setLoading(false);
     }
   };
 
+  const suit = currentSuit;
+  const red = isRed(suit);
+
   return (
-    <div className={styles.glassCard}>
-      <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <Coins /> ハイアンドロー
-      </h3>
-      <p style={{ color: '#ccc', marginBottom: '1rem' }}>ベット額を決めて、次のカードの数字（1〜13）を当てよう！当たれば2倍！</p>
-      
-      <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-        <input 
-          type="number" 
-          value={betAmount} 
-          onChange={e => setBetAmount(Number(e.target.value))}
-          className={styles.tradeInput}
-          style={{ width: '150px', fontSize: '1.2rem', padding: '0.5rem 1rem' }}
+    <div className={styles.game}>
+      <h2 className={styles.title}>🃏 ハイ & ロー</h2>
+      <p className={styles.desc}>次のカードが今より<strong>高い</strong>か<strong>低い</strong>か予想しよう</p>
+
+      {/* Playing card */}
+      <div className={styles.cardArea}>
+        <div className={`${styles.card} ${red ? styles.red : styles.black} ${flipping ? styles.flipping : ''}`}>
+          <div className={styles.cornerTL}>
+            <span>{getLabel(currentCard)}</span>
+            <span>{suit}</span>
+          </div>
+          <div className={styles.centerSuit}>{suit}</div>
+          <div className={styles.cornerBR}>
+            <span>{getLabel(currentCard)}</span>
+            <span>{suit}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Result banner */}
+      {result && (
+        <div className={`${styles.result} ${styles[result]}`}>
+          {result === 'win' && `🏆 WIN！ +¥${payout.toLocaleString()}`}
+          {result === 'draw' && '🤝 DRAW — 賭け金返還'}
+          {result === 'lose' && `💸 LOSE — ¥${betAmount.toLocaleString()} 没収`}
+        </div>
+      )}
+
+      {/* Chip buttons */}
+      <div className={styles.chips}>
+        {BET_PRESETS.map(v => (
+          <button
+            key={v}
+            className={`${styles.chip} ${betAmount === v ? styles.chipActive : ''}`}
+            onClick={() => setBetAmount(v)}
+          >
+            ¥{v.toLocaleString()}
+          </button>
+        ))}
+        <input
+          type="number"
           min="1"
+          value={betAmount}
+          onChange={e => setBetAmount(Number(e.target.value))}
+          className={styles.betInput}
         />
-        <span style={{ marginLeft: '0.5rem' }}>円を賭ける</span>
       </div>
 
-      <div className={`${styles.cardDisplay} ${isFlipping ? styles.flip : ''}`}>
-        {isFlipping ? '?' : currentCard}
-      </div>
-
-      <p style={{ textAlign: 'center', fontSize: '1.1rem', fontWeight: 'bold', height: '1.5rem' }}>{message}</p>
-
-      <div className={styles.controls}>
-        <button 
-          className={`${styles.actionBtn} ${styles.high}`} 
-          onClick={() => play('high')}
-          disabled={loading}
-        >
-          {loading ? <Loader className="animate-spin" /> : 'HIGH (高い)'}
+      {/* Action buttons */}
+      <div className={styles.actions}>
+        <button className={`${styles.btn} ${styles.high}`} onClick={() => play('high')} disabled={loading}>
+          {loading ? <Loader size={18} className={styles.spin} /> : '▲ HIGH'}
         </button>
-        <button 
-          className={`${styles.actionBtn} ${styles.low}`} 
-          onClick={() => play('low')}
-          disabled={loading}
-        >
-          {loading ? <Loader className="animate-spin" /> : 'LOW (低い)'}
+        <button className={`${styles.btn} ${styles.low}`} onClick={() => play('low')} disabled={loading}>
+          {loading ? <Loader size={18} className={styles.spin} /> : '▼ LOW'}
         </button>
       </div>
+
+      <p className={styles.balanceNote}>残高: ¥{(user?.finance_balance ?? 0).toLocaleString()}</p>
     </div>
   );
 }

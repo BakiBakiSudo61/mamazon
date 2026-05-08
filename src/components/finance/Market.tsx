@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
-import styles from '../../pages/FinancePage.module.css';
-import { TrendingUp, TrendingDown, Pickaxe } from 'lucide-react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
+import styles from './Market.module.css';
 
 interface Asset {
   id: string;
@@ -25,8 +25,8 @@ export function Market() {
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [tradeAmounts, setTradeAmounts] = useState<Record<string, number>>({});
   const [message, setMessage] = useState('');
+  const prevPricesRef = useRef<Record<string, number>>({});
 
-  // Fetch initial data
   useEffect(() => {
     const init = async () => {
       try {
@@ -40,21 +40,22 @@ export function Market() {
     init();
   }, []);
 
-  // Poll prices every 2 seconds
+  // Fix: use ref for prevPrices to avoid infinite re-render
   useEffect(() => {
     const fetchPrices = async () => {
       try {
         const p = await api.get<Record<string, number>>('/finance/market/prices');
-        setPrevPrices(prev => Object.keys(prev).length ? prices : p);
+        setPrevPrices({ ...prevPricesRef.current });
+        prevPricesRef.current = p;
         setPrices(p);
       } catch (err) {
         console.error(err);
       }
     };
     fetchPrices();
-    const interval = setInterval(fetchPrices, 2000);
+    const interval = setInterval(fetchPrices, 3000);
     return () => clearInterval(interval);
-  }, [prices]);
+  }, []); // empty deps — runs once
 
   const fetchPortfolio = async () => {
     try {
@@ -68,86 +69,79 @@ export function Market() {
   const handleTrade = async (assetId: string, action: 'buy' | 'sell') => {
     const quantity = tradeAmounts[assetId] || 0;
     if (quantity <= 0) return;
-
     try {
-      const res = await api.post<any>(`/finance/market/${action}`, { assetId, quantity });
-      setMessage(`${res.quantity} ${assetId} を ${action === 'buy' ? '購入' : '売却'}しました！`);
+      const res = await api.post<{ quantity: number }>(`/finance/market/${action}`, { assetId, quantity });
+      setMessage(`${res.quantity} ${assetId} を${action === 'buy' ? '購入' : '売却'}しました！`);
       setTradeAmounts({ ...tradeAmounts, [assetId]: 0 });
       await fetchMe();
       await fetchPortfolio();
       setTimeout(() => setMessage(''), 3000);
     } catch (err: any) {
-      alert(err.message || 'エラーが発生しました');
-    }
-  };
-
-  const mine = async () => {
-    try {
-      const res = await api.post<{ minedAmount: number }>('/finance/mine', {});
-      setMessage(`⛏️ マイニング成功！ ${res.minedAmount}円 発見しました！`);
-      await fetchMe();
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err: any) {
-      alert(err.message);
+      setMessage(`❌ ${err.message || 'エラーが発生しました'}`);
+      setTimeout(() => setMessage(''), 4000);
     }
   };
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '2rem' }}>📈 Mamazon Market</h2>
-        <button className={`${styles.actionBtn} ${styles.mine}`} onClick={mine} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Pickaxe size={20} /> マイニング (無料)
-        </button>
+    <div className={styles.market}>
+      <div className={styles.marketHeader}>
+        <h2 className={styles.marketTitle}>📈 Mamazon Market</h2>
+        <p className={styles.marketSubtitle}>リアルタイム価格でトレード</p>
       </div>
 
       {message && (
-        <div style={{ background: '#10b981', color: '#fff', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', textAlign: 'center', fontWeight: 'bold' }}>
+        <div className={`${styles.msg} ${message.startsWith('❌') ? styles.msgError : styles.msgSuccess}`}>
           {message}
         </div>
       )}
 
-      <div className={styles.marketGrid}>
+      <div className={styles.assetGrid}>
         {assets.map(asset => {
           const price = prices[asset.id] || 0;
           const prevPrice = prevPrices[asset.id] || price;
-          const isUp = price >= prevPrice;
+          const diff = price - prevPrice;
+          const isUp = diff >= 0;
 
           return (
             <div key={asset.id} className={styles.assetCard}>
-              <div className={styles.assetHeader}>
+              <div className={styles.assetTop}>
                 <div>
                   <div className={styles.assetName}>{asset.name}</div>
-                  <div className={styles.assetSymbol}>{asset.id} ({asset.type})</div>
+                  <div className={styles.assetMeta}>
+                    <span className={styles.assetId}>{asset.id}</span>
+                    <span className={`${styles.assetType} ${asset.type === 'crypto' ? styles.crypto : styles.stock}`}>
+                      {asset.type === 'crypto' ? '仮想通貨' : '株式'}
+                    </span>
+                  </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div className={`${styles.assetPrice} ${!isUp ? styles.down : ''}`}>
+                <div className={styles.priceBlock}>
+                  <div className={`${styles.price} ${isUp ? styles.priceUp : styles.priceDown}`}>
                     ¥{price.toLocaleString()}
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: isUp ? '#10b981' : '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                    {isUp ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                    {price - prevPrice > 0 ? '+' : ''}{(price - prevPrice).toLocaleString()}
+                  <div className={`${styles.priceDiff} ${isUp ? styles.diffUp : styles.diffDown}`}>
+                    {isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                    {diff > 0 ? '+' : ''}{diff.toLocaleString()}
                   </div>
                 </div>
               </div>
 
-              <div className={styles.tradeControls}>
-                <input 
-                  type="number" 
+              <div className={styles.tradeRow}>
+                <input
+                  type="number"
                   min="1"
                   placeholder="数量"
                   className={styles.tradeInput}
                   value={tradeAmounts[asset.id] || ''}
                   onChange={e => setTradeAmounts({ ...tradeAmounts, [asset.id]: Number(e.target.value) })}
                 />
-                <button 
+                <button
                   className={`${styles.tradeBtn} ${styles.buy}`}
                   onClick={() => handleTrade(asset.id, 'buy')}
                   disabled={!tradeAmounts[asset.id]}
                 >
                   買う
                 </button>
-                <button 
+                <button
                   className={`${styles.tradeBtn} ${styles.sell}`}
                   onClick={() => handleTrade(asset.id, 'sell')}
                   disabled={!tradeAmounts[asset.id]}
@@ -161,26 +155,28 @@ export function Market() {
       </div>
 
       <div className={styles.portfolio}>
-        <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>💼 あなたのポートフォリオ</h3>
+        <h3 className={styles.portfolioTitle}>💼 ポートフォリオ</h3>
         {portfolio.length === 0 ? (
-          <p style={{ color: '#aaa' }}>まだアセットを保有していません。</p>
+          <p className={styles.emptyNote}>まだアセットを保有していません</p>
         ) : (
-          <div>
+          <div className={styles.portfolioList}>
             {portfolio.map(p => {
               const asset = assets.find(a => a.id === p.asset_id);
               const currentPrice = prices[p.asset_id] || 0;
               const currentValue = currentPrice * p.quantity;
-              const profit = currentValue - (p.avg_buy_price * p.quantity);
+              const profit = currentValue - p.avg_buy_price * p.quantity;
               return (
                 <div key={p.asset_id} className={styles.portfolioItem}>
                   <div>
-                    <strong>{asset?.name || p.asset_id}</strong>
-                    <div style={{ fontSize: '0.9rem', color: '#888' }}>保有数: {p.quantity} | 平均取得単価: ¥{Math.round(p.avg_buy_price).toLocaleString()}</div>
+                    <div className={styles.pfName}>{asset?.name || p.asset_id}</div>
+                    <div className={styles.pfMeta}>
+                      {p.quantity}株 · 平均 ¥{Math.round(p.avg_buy_price).toLocaleString()}
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <strong>評価額: ¥{currentValue.toLocaleString()}</strong>
-                    <div style={{ fontSize: '0.9rem', color: profit >= 0 ? '#10b981' : '#ef4444' }}>
-                      損益: {profit >= 0 ? '+' : ''}{Math.round(profit).toLocaleString()}円
+                  <div className={styles.pfValues}>
+                    <div className={styles.pfValue}>¥{currentValue.toLocaleString()}</div>
+                    <div className={`${styles.pfProfit} ${profit >= 0 ? styles.profitUp : styles.profitDown}`}>
+                      {profit >= 0 ? '+' : ''}{Math.round(profit).toLocaleString()}円
                     </div>
                   </div>
                 </div>

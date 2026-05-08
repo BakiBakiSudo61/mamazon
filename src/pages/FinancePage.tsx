@@ -1,47 +1,169 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { HighLow } from '../components/finance/HighLow';
-import { Slots } from '../components/finance/Slots';
-import { Market } from '../components/finance/Market';
 import { api } from '../api/client';
+import { ArrowRightLeft, Loader, ArrowDownCircle, ArrowUpCircle, Pickaxe } from 'lucide-react';
 import styles from './FinancePage.module.css';
-import { Sparkles, ArrowRightLeft, Loader } from 'lucide-react';
+
+type Direction = 'deposit' | 'withdraw';
 
 export function FinancePage() {
-  const { user, initialized, fetchMe } = useAuthStore();
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'casino' | 'market'>('casino');
-  const [convertAmount, setConvertAmount] = useState(0);
-  const [converting, setConverting] = useState(false);
-  const [convertMsg, setConvertMsg] = useState('');
-
-  useEffect(() => {
-    if (initialized && !user) {
-      navigate('/login?redirect=/finance');
-    }
-  }, [user, initialized, navigate]);
-
-  const handleConvert = async () => {
-    if (convertAmount <= 0) return;
-    setConverting(true);
-    setConvertMsg('');
-    try {
-      await api.post<{ newBalance: number; newFinanceBalance: number }>('/finance/convert', { amount: convertAmount });
-      setConvertMsg(`✅ ¥${convertAmount.toLocaleString()} をMamazon残高に変換しました！`);
-      setConvertAmount(0);
-      await fetchMe();
-      setTimeout(() => setConvertMsg(''), 4000);
-    } catch (err: any) {
-      setConvertMsg(`❌ ${err.message || 'エラーが発生しました'}`);
-    } finally {
-      setConverting(false);
-    }
-  };
+  const { user, fetchMe } = useAuthStore();
+  const [amount, setAmount] = useState('');
+  const [direction, setDirection] = useState<Direction>('deposit');
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [miningLoading, setMiningLoading] = useState(false);
 
   if (!user) return null;
 
   const finBal = user.finance_balance ?? 0;
+  const shopBal = user.balance ?? 0;
+  const amountNum = parseInt(amount) || 0;
+  const maxAmount = direction === 'deposit' ? shopBal : finBal;
+
+  const handleConvert = async () => {
+    if (amountNum <= 0 || amountNum > maxAmount) return;
+    setLoading(true);
+    setMsg('');
+    try {
+      if (direction === 'deposit') {
+        await api.post('/finance/deposit', { amount: amountNum });
+        setMsg(`✅ ¥${amountNum.toLocaleString()} をファイナンスに入金しました`);
+      } else {
+        await api.post('/finance/convert', { amount: amountNum });
+        setMsg(`✅ ¥${amountNum.toLocaleString()} をMamazon残高に出金しました`);
+      }
+      setAmount('');
+      await fetchMe();
+      setTimeout(() => setMsg(''), 4000);
+    } catch (err: any) {
+      setMsg(`❌ ${err.message || 'エラーが発生しました'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMine = async () => {
+    setMiningLoading(true);
+    setMsg('');
+    try {
+      const res = await api.post<{ minedAmount: number }>('/finance/mine', {});
+      setMsg(`⛏️ マイニング成功！ ¥${res.minedAmount.toLocaleString()} 獲得！`);
+      await fetchMe();
+      setTimeout(() => setMsg(''), 4000);
+    } catch (err: any) {
+      setMsg(`❌ ${err.message || 'エラーが発生しました'}`);
+    } finally {
+      setMiningLoading(false);
+    }
+  };
+
+  return (
+    <div className={styles.page}>
+      <div className={styles.orb1} />
+      <div className={styles.orb2} />
+
+      <div className={styles.inner}>
+        <div className={styles.titleSection}>
+          <h1 className={styles.title}>💰 Mamazon Finance</h1>
+          <p className={styles.subtitle}>資産を増やして、最高のショッピング体験を</p>
+        </div>
+
+        {/* Balance cards */}
+        <div className={styles.balanceGrid}>
+          <div className={styles.balanceCard}>
+            <div className={styles.balanceIcon}>🛒</div>
+            <div>
+              <div className={styles.balanceLabel}>Mamazon残高</div>
+              <div className={styles.balanceAmount}>¥{shopBal.toLocaleString()}</div>
+            </div>
+          </div>
+          <div className={`${styles.balanceCard} ${styles.financeBalanceCard}`}>
+            <div className={styles.balanceIcon}>🎰</div>
+            <div>
+              <div className={styles.balanceLabel}>ファイナンス残高</div>
+              <div className={styles.balanceAmount}>¥{finBal.toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Convert section */}
+        <div className={styles.convertCard}>
+          <h2 className={styles.convertTitle}>
+            <ArrowRightLeft size={18} /> 残高の変換
+          </h2>
+          <div className={styles.directionToggle}>
+            <button
+              className={`${styles.dirBtn} ${direction === 'deposit' ? styles.dirActive : ''}`}
+              onClick={() => setDirection('deposit')}
+            >
+              <ArrowDownCircle size={15} /> Mamazon → ファイナンス
+            </button>
+            <button
+              className={`${styles.dirBtn} ${direction === 'withdraw' ? styles.dirActive : ''}`}
+              onClick={() => setDirection('withdraw')}
+            >
+              <ArrowUpCircle size={15} /> ファイナンス → Mamazon
+            </button>
+          </div>
+          <div className={styles.convertInputRow}>
+            <input
+              type="number"
+              min="1"
+              placeholder="金額を入力"
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              className={styles.convertInput}
+            />
+            <button className={styles.maxBtn} onClick={() => setAmount(String(maxAmount))}>
+              MAX
+            </button>
+            <button
+              className={styles.convertBtn}
+              onClick={handleConvert}
+              disabled={loading || amountNum <= 0 || amountNum > maxAmount}
+            >
+              {loading ? <Loader size={16} /> : '変換'}
+            </button>
+          </div>
+          {msg && (
+            <div className={`${styles.msg} ${msg.startsWith('❌') ? styles.msgError : styles.msgSuccess}`}>
+              {msg}
+            </div>
+          )}
+        </div>
+
+        {/* Mining */}
+        <div className={styles.mineSection}>
+          <button className={styles.mineBtn} onClick={handleMine} disabled={miningLoading}>
+            {miningLoading ? <Loader size={18} /> : <Pickaxe size={18} />}
+            マイニング（無料で¥100〜¥500獲得）
+          </button>
+        </div>
+
+        {/* Navigation cards */}
+        <div className={styles.navGrid}>
+          <Link to="/finance/casino" className={styles.navCard}>
+            <div className={styles.navCardBgPurple} />
+            <div className={styles.navCardIcon}>🎰</div>
+            <div className={styles.navCardTitle}>カジノ</div>
+            <div className={styles.navCardDesc}>ハイ&ロー・スロットで一攫千金</div>
+            <div className={styles.navCardArrow}>→</div>
+          </Link>
+          <Link to="/finance/market" className={styles.navCard}>
+            <div className={styles.navCardBgGreen} />
+            <div className={styles.navCardIcon}>📈</div>
+            <div className={styles.navCardTitle}>マーケット</div>
+            <div className={styles.navCardDesc}>株・仮想通貨でトレード</div>
+            <div className={styles.navCardArrow}>→</div>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
   return (
     <div style={{ background: '#0a0a0a', minHeight: '100vh', paddingBottom: '4rem' }}>

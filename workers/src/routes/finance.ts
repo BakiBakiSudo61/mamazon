@@ -68,6 +68,9 @@ async function ensureSchema(env: Env) {
   try {
     await env.DB.prepare(`ALTER TABLE users ADD COLUMN finance_balance TEXT DEFAULT '10000'`).run();
   } catch (_) { /* column already exists */ }
+  try {
+    await env.DB.prepare(`UPDATE users SET finance_balance = '10000' WHERE finance_balance IS NULL OR finance_balance = ''`).run();
+  } catch (_) { /* ignore */ }
 }
 
 export async function handleFinance(path: string, request: Request, env: Env, session: { userId: string } | null): Promise<Response | null> {
@@ -225,6 +228,29 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
       return json({ success: true, newBalance, assetId, quantity, price: currentPrice, earned: totalEarned });
+    }
+
+    // --- Deposit: Mamazon Shopping Balance → Finance Balance ---
+    if (path === '/finance/deposit') {
+      const { amount } = await request.json() as { amount: number };
+      if (amount <= 0) return json({ error: '無効な金額です' }, 400);
+
+      const user = await env.DB.prepare('SELECT balance, finance_balance FROM users WHERE id = ?')
+        .bind(userId).first<{ balance: string; finance_balance: string }>();
+      if (!user) return json({ error: 'ユーザーが見つかりません' }, 404);
+
+      const shopBal = parseInt(user.balance || '0');
+      if (shopBal < amount) {
+        return json({ error: 'Mamazon残高が不足しています' }, 400);
+      }
+
+      const newShoppingBalance = shopBal - amount;
+      const newFinanceBalance = parseInt(user.finance_balance || '0') + amount;
+
+      await env.DB.prepare('UPDATE users SET balance = ?, finance_balance = ? WHERE id = ?')
+        .bind(newShoppingBalance.toString(), newFinanceBalance.toString(), userId).run();
+
+      return json({ success: true, newBalance: newShoppingBalance, newFinanceBalance });
     }
 
     // --- Convert Finance Balance → Mamazon Shopping Balance ---

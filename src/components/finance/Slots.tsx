@@ -1,97 +1,128 @@
-import { useState } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
-import styles from '../../pages/FinancePage.module.css';
-import { Loader, Dices } from 'lucide-react';
+import { Loader } from 'lucide-react';
+import styles from './Slots.module.css';
+
+const SYMBOLS = ['🍎', '🍇', '🍒', '🔔', '💎', '7️⃣'];
+const BET_PRESETS = [100, 500, 1000, 5000];
 
 export function Slots() {
   const { user, fetchMe } = useAuthStore();
   const [betAmount, setBetAmount] = useState(100);
-  const [reels, setReels] = useState(['🍒', '🍒', '🍒']);
-  const [isSpinning, setIsSpinning] = useState(false);
-  const [message, setMessage] = useState('スピンを押して運試し！ (最大50倍)');
+  const [displayReels, setDisplayReels] = useState(['🍒', '🍒', '🍒']);
+  const [spinning, setSpinning] = useState(false);
+  const [multiplier, setMultiplier] = useState<number | null>(null);
+  const [payout, setPayout] = useState<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, []);
 
   const spin = async () => {
-    if (betAmount <= 0 || betAmount > (user?.finance_balance ?? 0)) {
-      setMessage('無効なベット金額です。ファイナンス残高を確認してください。');
-      return;
-    }
-    
-    setIsSpinning(true);
-    setMessage('Spinning...');
+    const bal = user?.finance_balance ?? 0;
+    if (betAmount <= 0 || betAmount > bal || spinning) return;
+    setSpinning(true);
+    setMultiplier(null);
+    setPayout(null);
+
+    intervalRef.current = setInterval(() => {
+      setDisplayReels([
+        SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
+        SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
+        SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
+      ]);
+    }, 100);
 
     try {
-      const res = await api.post<{ reels: string[], multiplier: number, payout: number }>('/finance/gamble/slots', {
-        amount: betAmount
-      });
-
-      // Simulate spin duration
-      setTimeout(async () => {
-        setReels(res.reels);
-        setIsSpinning(false);
-        
-        if (res.multiplier > 0) {
-          setMessage(`🎰 ジャックポット！ ${res.multiplier}倍！ ${res.payout}円獲得！`);
-        } else {
-          setMessage('😭 ハズレ...');
-        }
-        
-        await fetchMe();
-      }, 1500);
-
-    } catch (err: any) {
-      setMessage(err.message || 'エラーが発生しました');
-      setIsSpinning(false);
+      const res = await api.post<{ reels: string[]; multiplier: number; payout: number }>(
+        '/finance/gamble/slots', { amount: betAmount }
+      );
+      setTimeout(() => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setDisplayReels(res.reels);
+        setMultiplier(res.multiplier);
+        setPayout(res.payout);
+        setSpinning(false);
+        fetchMe();
+      }, 1400);
+    } catch {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setSpinning(false);
     }
   };
 
   return (
-    <div className={styles.glassCard}>
-      <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <Dices /> Mamazonスロット
-      </h3>
-      <p style={{ color: '#ccc', marginBottom: '1rem' }}>
-        3つ揃えば大当たり！<br/>
-        7️⃣=50倍, 💎=20倍, 他=10倍, 2つ=2倍
-      </p>
+    <div className={styles.game}>
+      <h2 className={styles.title}>🎰 Mamazon スロット</h2>
+      <p className={styles.desc}>3つ揃えば大当たり！</p>
 
-      <div className={styles.slotsMachine}>
-        <div className={styles.reels}>
-          <div className={`${styles.reel} ${isSpinning ? styles.spinning : ''}`}>
-            {isSpinning ? '🎰' : reels[0]}
-          </div>
-          <div className={`${styles.reel} ${isSpinning ? styles.spinning : ''}`} style={{ animationDelay: '0.1s' }}>
-            {isSpinning ? '🎰' : reels[1]}
-          </div>
-          <div className={`${styles.reel} ${isSpinning ? styles.spinning : ''}`} style={{ animationDelay: '0.2s' }}>
-            {isSpinning ? '🎰' : reels[2]}
-          </div>
+      {/* Slot machine frame */}
+      <div className={styles.machine}>
+        <div className={styles.machineTopLight} />
+        <div className={styles.reelWindow}>
+          {displayReels.map((sym, i) => (
+            <div
+              key={i}
+              className={`${styles.reel} ${spinning ? styles.reelSpin : ''}`}
+              style={{ animationDelay: `${i * 0.06}s` }}
+            >
+              <span className={styles.reelSymbol}>{sym}</span>
+            </div>
+          ))}
+        </div>
+        <div className={styles.paylineLine} />
+        <div className={styles.machineScrews}>
+          <div className={styles.screw} />
+          <div className={styles.screw} />
         </div>
       </div>
 
-      <div style={{ textAlign: 'center', margin: '1.5rem 0' }}>
-        <input 
-          type="number" 
-          value={betAmount} 
-          onChange={e => setBetAmount(Number(e.target.value))}
-          className={styles.tradeInput}
-          style={{ width: '150px', fontSize: '1.2rem', padding: '0.5rem 1rem' }}
-          min="1"
-        />
-        <span style={{ marginLeft: '0.5rem' }}>円を賭ける</span>
+      {/* Result */}
+      {multiplier !== null && !spinning && (
+        <div className={`${styles.result} ${multiplier > 0 ? styles.win : styles.lose}`}>
+          {multiplier > 0
+            ? `🏆 ${multiplier}倍！ +¥${payout?.toLocaleString()}`
+            : '💸 ハズレ...'}
+        </div>
+      )}
+
+      {/* Pay table */}
+      <div className={styles.payTable}>
+        <span className={styles.payEntry}><span className={styles.payEmoji}>7️⃣</span>×3 = <strong className={styles.goldText}>50x</strong></span>
+        <span className={styles.payEntry}><span className={styles.payEmoji}>💎</span>×3 = <strong className={styles.silverText}>20x</strong></span>
+        <span className={styles.payEntry}>同×3 = <strong>10x</strong></span>
+        <span className={styles.payEntry}>同×2 = <strong>2x</strong></span>
       </div>
 
-      <p style={{ textAlign: 'center', fontSize: '1.1rem', fontWeight: 'bold', height: '1.5rem', marginBottom: '1rem' }}>
-        {message}
-      </p>
+      {/* Chip buttons */}
+      <div className={styles.chips}>
+        {BET_PRESETS.map(v => (
+          <button
+            key={v}
+            className={`${styles.chip} ${betAmount === v ? styles.chipActive : ''}`}
+            onClick={() => setBetAmount(v)}
+          >
+            ¥{v.toLocaleString()}
+          </button>
+        ))}
+        <input
+          type="number"
+          min="1"
+          value={betAmount}
+          onChange={e => setBetAmount(Number(e.target.value))}
+          className={styles.betInput}
+        />
+      </div>
 
-      <button 
-        className={`${styles.actionBtn} ${styles.spin}`} 
-        onClick={spin}
-        disabled={isSpinning}
-      >
-        {isSpinning ? <Loader className="animate-spin mx-auto" /> : 'SPIN!'}
+      <button className={styles.spinBtn} onClick={spin} disabled={spinning}>
+        {spinning
+          ? <><Loader size={22} className={styles.spinLoader} /> スピン中...</>
+          : '🎰 SPIN！'}
       </button>
+
+      <p className={styles.balanceNote}>残高: ¥{(user?.finance_balance ?? 0).toLocaleString()}</p>
     </div>
   );
 }
