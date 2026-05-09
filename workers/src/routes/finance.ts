@@ -377,20 +377,27 @@ export async function handleFinance(path: string, request: Request, env: Env, se
     // --- Demo Race (Immediate result for testing) ---
     if (path === '/finance/gamble/horseracing/demo') {
       const { amount, horseIndex } = await request.json() as { amount: number, horseIndex: number };
-          winningHorse = i;
-          break;
-        }
+      if (amount <= 0 || horseIndex < 0 || horseIndex > 17) return json({ error: '無効なリクエストです' }, 400);
+
+      const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
+      const finBal = parseInt(user?.finance_balance || '0');
+      if (!user || finBal < amount) {
+        return json({ error: 'ファイナンス残高が不足しています' }, 400);
       }
+
+      // Use a random raceId for demo so each demo is different
+      const demoRaceId = `demo-${Date.now()}`;
+      const { horses, winner: winningHorse } = getRaceData(demoRaceId);
 
       let payout = 0;
       if (winningHorse === horseIndex) {
-        payout = Math.floor(amount * odds[horseIndex]);
+        payout = Math.floor(amount * horses[horseIndex].odds);
       }
 
       const newBalance = finBal - amount + payout;
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
-      return json({ winningHorse, payout, newBalance });
+      return json({ winningHorse, horses, payout, newBalance });
     }
 
     // --- Mine Crypto ---
