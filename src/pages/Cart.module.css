@@ -1,4 +1,4 @@
-.page { min-height: 100vh; }
+.page { min-height: 100vh; overflow-x: hidden; }
 
 .empty {
   min-height: 60vh;
@@ -17,6 +17,8 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 2rem 1rem 3rem;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .title { font-size: 1.5rem; font-weight: 700; margin: 0 0 1.5rem; }
@@ -30,6 +32,9 @@
 
 @media (max-width: 760px) {
   .layout { grid-template-columns: 1fr; }
+  .item { flex-wrap: wrap; }
+  .itemControls { width: 100%; justify-content: flex-end; }
+  .lineTotal { min-width: auto; }
 }
 
 .itemList { display: flex; flex-direction: column; gap: 1rem; }
