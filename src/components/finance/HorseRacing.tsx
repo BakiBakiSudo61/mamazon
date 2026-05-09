@@ -1,16 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
 import { Loader } from 'lucide-react';
 import styles from './HorseRacing.module.css';
-
-const HORSES = [
-  { name: 'マカヒキ', odds: 2.0, color: '#e74c3c' },
-  { name: 'キタサン', odds: 3.5, color: '#3498db' },
-  { name: 'ディープ', odds: 5.0, color: '#2ecc71' },
-  { name: 'アーモンド', odds: 10.0, color: '#f1c40f' },
-  { name: 'ゴールドS', odds: 20.0, color: '#9b59b6' },
-];
 
 const BET_PRESETS = [100, 500, 1000, 5000];
 
@@ -18,117 +10,208 @@ export function HorseRacing() {
   const { user, fetchMe } = useAuthStore();
   const [betAmount, setBetAmount] = useState(100);
   const [selectedHorse, setSelectedHorse] = useState(0);
-  const [loading, setLoading] = useState(false);
+  
+  const [schedule, setSchedule] = useState<any>(null);
+  const [bets, setBets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [claiming, setClaiming] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
   const [racing, setRacing] = useState(false);
-  const [result, setResult] = useState<{ winner: number, payout: number } | null>(null);
-  const [horsePositions, setHorsePositions] = useState<number[]>([0, 0, 0, 0, 0]);
+  const [demoResult, setDemoResult] = useState<any>(null);
+  const [horsePositions, setHorsePositions] = useState<number[]>(Array(18).fill(0));
 
-  const play = async () => {
-    const bal = user?.finance_balance ?? 0;
-    if (betAmount <= 0 || betAmount > bal || loading || racing) return;
-    setLoading(true);
-    setResult(null);
-    setHorsePositions([0, 0, 0, 0, 0]);
+  useEffect(() => {
+    loadInfo();
+  }, []);
 
+  const loadInfo = async () => {
     try {
-      const res = await api.post<{ winningHorse: number; payout: number; newBalance: number }>(
-        '/finance/gamble/horseracing', { amount: betAmount, horseIndex: selectedHorse }
-      );
-      
+      const res = await api.get<{ schedule: any, bets: any[] }>('/finance/gamble/horseracing/info');
+      setSchedule(res.schedule);
+      setBets(res.bets);
+    } catch {}
+    setLoading(false);
+  };
+
+  const claim = async () => {
+    setClaiming(true);
+    try {
+      const res = await api.post<{ claimedAmount: number }>('/finance/gamble/horseracing/claim', {});
+      if (res.claimedAmount > 0) {
+        alert(`おめでとうございます！ 払戻金 ¥${res.claimedAmount.toLocaleString()} を受け取りました！`);
+      } else {
+        alert('的中した馬券はありませんでした。');
+      }
+      fetchMe();
+      await loadInfo();
+    } catch {}
+    setClaiming(false);
+  };
+
+  const placeBet = async () => {
+    if (!schedule) return;
+    setActionLoading(true);
+    try {
+      await api.post('/finance/gamble/horseracing/bet', {
+        amount: betAmount,
+        horseIndex: selectedHorse,
+        raceId: schedule.nextRace.id
+      });
+      alert('馬券を購入しました！レース後に結果を確認してください。');
+      fetchMe();
+      await loadInfo();
+    } catch (e: any) {
+      alert(e.message || 'エラーが発生しました');
+    }
+    setActionLoading(false);
+  };
+
+  const runDemo = async () => {
+    setActionLoading(true);
+    setDemoResult(null);
+    setHorsePositions(Array(18).fill(0));
+    try {
+      const res = await api.post<{ winner: number, payout: number }>('/finance/gamble/horseracing/demo', {
+        amount: betAmount,
+        horseIndex: selectedHorse
+      });
       setRacing(true);
       
-      // Simulate race animation
       const interval = setInterval(() => {
         setHorsePositions(prev => {
           const next = [...prev];
           let done = false;
-          for (let i = 0; i < 5; i++) {
-            // winning horse naturally moves a bit faster on average, others lag
-            const speed = i === res.winningHorse ? Math.random() * 8 + 4 : Math.random() * 6 + 2;
+          for (let i = 0; i < 18; i++) {
+            const speed = i === res.winner ? Math.random() * 8 + 4 : Math.random() * 6 + 2;
             next[i] = Math.min(100, next[i] + speed);
-            if (next[i] >= 100 && i === res.winningHorse) {
-              done = true;
-            }
+            if (next[i] >= 100 && i === res.winner) done = true;
           }
           if (done) {
             clearInterval(interval);
             setTimeout(() => {
               setRacing(false);
-              setResult({ winner: res.winningHorse, payout: res.payout });
-              setLoading(false);
+              setDemoResult(res);
               fetchMe();
-            }, 500);
+            }, 1000);
           }
           return next;
         });
       }, 150);
-
-    } catch {
-      setLoading(false);
+      
+    } catch (e: any) {
+      alert(e.message || 'エラーが発生しました');
       setRacing(false);
     }
+    setActionLoading(false);
   };
+
+  if (loading || !schedule) return <div className={styles.game}><Loader className={styles.spin} style={{ margin: 'auto' }} /></div>;
+
+  const nextRace = schedule.nextRace;
+  const prevRace = schedule.currentRace;
+  const myBets = bets.filter(b => b.race_id === nextRace.id);
+  const unclaimableBets = bets.filter(b => b.race_id !== nextRace.id && b.status === 'pending');
 
   return (
     <div className={styles.game}>
-      <h2 className={styles.title}>🏇 競馬</h2>
-      <p className={styles.desc}>1着になる馬を予想しよう！</p>
-
-      <div className={styles.trackArea}>
-        {HORSES.map((horse, idx) => (
-          <div key={idx} className={styles.trackLine}>
-            <div className={styles.trackNum}>{idx + 1}</div>
-            <div className={styles.trackBg}>
-              <div 
-                className={styles.horseWrap} 
-                style={{ 
-                  left: `${horsePositions[idx]}%`, 
-                  transform: `translateX(-${horsePositions[idx]}%)` 
-                }}
-              >
-                <div 
-                  className={styles.horse}
-                  style={{ 
-                    backgroundColor: horse.color,
-                    boxShadow: selectedHorse === idx ? `0 0 10px ${horse.color}` : 'none',
-                    border: selectedHorse === idx ? '2px solid white' : 'none'
-                  }}
-                >
-                  🐎
-                </div>
-                <span className={styles.horseNameLabel}>{horse.name}</span>
-              </div>
-            </div>
-            <div className={styles.odds}>{horse.odds}x</div>
-          </div>
-        ))}
-        {/* Goal line */}
-        <div className={styles.goalLine} />
+      <h2 className={styles.title}>🏇 MAMAZON 競馬</h2>
+      <p className={styles.desc}>1日6レース開催（2時間おき）本格シミュレーション</p>
+      
+      <div className={styles.infoBanner}>
+        <div className={styles.infoBlock}>
+          <p className={styles.infoLabel}>次回のレース</p>
+          <p className={styles.infoValue}>{new Date(nextRace.time).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} 発走</p>
+        </div>
+        <div className={styles.infoBlock}>
+          <p className={styles.infoLabel}>前回の結果</p>
+          <p className={styles.infoValue}>1着: {prevRace.horses[prevRace.winner].no}番 {prevRace.horses[prevRace.winner].name} <span className={styles.oddsBadge}>{prevRace.horses[prevRace.winner].odds.toFixed(1)}倍</span></p>
+        </div>
       </div>
 
-      {result && (
-        <div className={`${styles.result} ${result.payout > 0 ? styles.win : styles.lose}`}>
-          {result.payout > 0 
-            ? `🏆 WIN！ +¥${result.payout.toLocaleString()}` 
-            : `💸 LOSE — ${HORSES[result.winner].name} が勝ちました`
+      {unclaimableBets.length > 0 && (
+        <div className={styles.claimBanner}>
+          <p>結果が確定した馬券があります！</p>
+          <button onClick={claim} disabled={claiming} className={styles.claimBtn}>
+            {claiming ? <Loader size={14} className={styles.spin} /> : '結果を確認して払戻金を受け取る'}
+          </button>
+        </div>
+      )}
+
+      {/* Track animation for demo */}
+      {racing && (
+        <div className={styles.trackArea}>
+          <div className={styles.goalLine} />
+          {nextRace.horses.map((horse: any, idx: number) => (
+            <div key={idx} className={styles.trackLine}>
+              <div className={styles.trackNum}>{horse.no}</div>
+              <div className={styles.trackBg}>
+                <div 
+                  className={styles.horseWrap} 
+                  style={{ 
+                    left: `${horsePositions[idx]}%`, 
+                    transform: `translateX(-${horsePositions[idx]}%)` 
+                  }}
+                >
+                  <div className={styles.horse}>🐎</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!racing && demoResult && (
+        <div className={`${styles.result} ${demoResult.payout > 0 ? styles.win : styles.lose}`}>
+          {demoResult.payout > 0 
+            ? `🏆 的中！ +¥${demoResult.payout.toLocaleString()}` 
+            : `💸 ハズレ — 1着は ${nextRace.horses[demoResult.winner].name} でした`
           }
         </div>
       )}
 
-      <div className={styles.controls}>
-        <div className={styles.horseSelect}>
-          <label>予想する馬:</label>
-          <select 
-            value={selectedHorse} 
-            onChange={e => setSelectedHorse(Number(e.target.value))}
-            disabled={loading || racing}
-            className={styles.select}
-          >
-            {HORSES.map((h, i) => (
-              <option key={i} value={i}>{i + 1}. {h.name} (オッズ {h.odds}倍)</option>
-            ))}
-          </select>
+      {!racing && (
+        <div className={styles.horseTableWrap}>
+          <table className={styles.horseTable}>
+            <thead>
+              <tr>
+                <th>馬番</th>
+                <th>馬名</th>
+                <th>単勝オッズ</th>
+                <th>予想</th>
+              </tr>
+            </thead>
+            <tbody>
+              {nextRace.horses.map((h: any, i: number) => (
+                <tr key={h.no} className={selectedHorse === i ? styles.selectedRow : ''} onClick={() => setSelectedHorse(i)}>
+                  <td className={styles.tdCenter}>
+                    <div className={styles.umaBan}>{h.no}</div>
+                  </td>
+                  <td className={styles.tdName}>{h.name}</td>
+                  <td className={styles.tdOdds}>{h.odds.toFixed(1)}</td>
+                  <td className={styles.tdCenter}>
+                    <div className={`${styles.radio} ${selectedHorse === i ? styles.radioChecked : ''}`} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+      )}
+
+      <div className={styles.controls}>
+        {myBets.length > 0 && (
+          <div className={styles.myBets}>
+            <p className={styles.myBetsTitle}>購入済みの馬券 (次レース)</p>
+            <ul>
+              {myBets.map((b: any) => (
+                <li key={b.id}>
+                  単勝 {nextRace.horses[b.horse_index].no}番 {nextRace.horses[b.horse_index].name} : ¥{b.amount.toLocaleString()}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className={styles.chips}>
           {BET_PRESETS.map(v => (
@@ -136,28 +219,40 @@ export function HorseRacing() {
               key={v}
               className={`${styles.chip} ${betAmount === v ? styles.chipActive : ''}`}
               onClick={() => setBetAmount(v)}
-              disabled={loading || racing}
+              disabled={actionLoading || racing}
             >
               ¥{v.toLocaleString()}
             </button>
           ))}
           <input
             type="number"
-            min="1"
+            min="100"
+            step="100"
             value={betAmount}
             onChange={e => setBetAmount(Number(e.target.value))}
             className={styles.betInput}
-            disabled={loading || racing}
+            disabled={actionLoading || racing}
           />
         </div>
         
-        <button 
-          className={styles.playBtn} 
-          onClick={play} 
-          disabled={loading || racing}
-        >
-          {loading || racing ? <Loader size={18} className={styles.spin} /> : 'レース開始！'}
-        </button>
+        <div className={styles.actionButtons}>
+          <button 
+            className={styles.betBtn} 
+            onClick={placeBet} 
+            disabled={actionLoading || racing}
+          >
+            {actionLoading ? <Loader size={18} className={styles.spin} /> : `本番馬券を購入`}
+          </button>
+          <button 
+            className={styles.demoBtn} 
+            onClick={runDemo} 
+            disabled={actionLoading || racing}
+            title="すぐに結果がわかるデモレースを実行します"
+          >
+            デモレースをすぐ実行
+          </button>
+        </div>
+        
         <p className={styles.balanceNote}>残高: ¥{(user?.finance_balance ?? 0).toLocaleString()}</p>
       </div>
     </div>

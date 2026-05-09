@@ -109,6 +109,121 @@ async function ensureSchema(env: Env) {
   try {
     await env.DB.prepare(`UPDATE users SET finance_balance = '10000' WHERE finance_balance IS NULL OR finance_balance = ''`).run();
   } catch (_) { /* ignore */ }
+  try {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS horse_bets (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        race_id TEXT NOT NULL,
+        horse_index INTEGER NOT NULL,
+        amount INTEGER NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at TEXT DEFAULT (datetime('now'))
+      )
+    `).run();
+  } catch (_) { /* already exists */ }
+}
+
+const HORSE_PREFIXES = ['マカ', 'キタサン', 'ディープ', 'アーモンド', 'ゴールド', 'シンボリ', 'テイエム', 'メジロ', 'ナリタ', 'ダイワ', 'アグネス', 'グラス', 'エルコンドル', 'スペシャル', 'サイレンス', 'トウカイ', 'オグリ', 'タマモ', 'ミホノ', 'メジロ'];
+const HORSE_SUFFIXES = ['ヒキ', 'ブラック', 'インパクト', 'アイ', 'シップ', 'ルドルフ', 'オペラオー', 'マックイーン', 'ブライアン', 'スカーレット', 'タキオン', 'ワンダー', 'パサー', 'ウィーク', 'スズカ', 'テイオー', 'キャップ', 'クロス', 'ブルボン', 'パーマー'];
+
+function getRaceData(raceId: string) {
+  // raceId format: "YYYY-MM-DD-HH"
+  let seed = 0;
+  for (let i = 0; i < raceId.length; i++) seed = (seed * 31 + raceId.charCodeAt(i)) | 0;
+
+  const horses = [];
+  let totalCap = 0;
+  
+  for (let i = 0; i < 18; i++) {
+    const s1 = seed + i * 13;
+    const pIdx = Math.floor(wang32(s1) * HORSE_PREFIXES.length);
+    const sIdx = Math.floor(wang32(s1 + 1) * HORSE_SUFFIXES.length);
+    const name = HORSE_PREFIXES[pIdx] + HORSE_SUFFIXES[sIdx];
+    
+    // Capability: higher is better chance to win. Exponential distribution for realistic odds.
+    const cap = Math.pow(wang32(s1 + 2), 3) * 100 + 10;
+    totalCap += cap;
+    
+    horses.push({ no: i + 1, name, cap, odds: 0 });
+  }
+
+  // Calculate parimutuel-like odds
+  const trackTakeout = 0.20; // 20% house edge
+  for (let i = 0; i < 18; i++) {
+    const winProb = horses[i].cap / totalCap;
+    let odds = (1 - trackTakeout) / winProb;
+    // Cap and format odds
+    odds = Math.max(1.1, Math.min(250.0, odds));
+    horses[i].odds = Math.round(odds * 10) / 10;
+  }
+
+  // Determine winner deterministically
+  let r = wang32(seed + 999) * totalCap;
+  let winner = 0;
+  for (let i = 0; i < 18; i++) {
+    r -= horses[i].cap;
+    if (r <= 0) {
+      winner = i;
+      break;
+    }
+  }
+
+  return { horses, winner };
+}
+
+function getCurrentRaceSchedule() {
+  const now = new Date();
+  // JST conversion
+  const jst = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+  
+  const y = jst.getUTCFullYear();
+  const m = String(jst.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(jst.getUTCDate()).padStart(2, '0');
+  const h = jst.getUTCHours();
+  
+  const scheduleHours = [12, 14, 16, 18, 20, 22];
+  
+  let nextH = scheduleHours.find(hour => hour > h);
+  let isNextDay = false;
+  if (nextH === undefined) {
+    nextH = scheduleHours[0];
+    isNextDay = true;
+  }
+
+  // Next race time
+  const nextDate = new Date(jst.getTime());
+  if (isNextDay) nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+  nextDate.setUTCHours(nextH, 0, 0, 0);
+  
+  // Previous race time
+  let prevH = [...scheduleHours].reverse().find(hour => hour <= h);
+  let prevDate = new Date(jst.getTime());
+  if (prevH === undefined) {
+    prevH = scheduleHours[scheduleHours.length - 1];
+    prevDate.setUTCDate(prevDate.getUTCDate() - 1);
+  }
+  prevDate.setUTCHours(prevH, 0, 0, 0);
+
+  const prevRaceId = `${prevDate.getUTCFullYear()}-${String(prevDate.getUTCMonth()+1).padStart(2,'0')}-${String(prevDate.getUTCDate()).padStart(2,'0')}-${String(prevH).padStart(2,'0')}`;
+  
+  const nextY = nextDate.getUTCFullYear();
+  const nextM = String(nextDate.getUTCMonth()+1).padStart(2,'0');
+  const nextD = String(nextDate.getUTCDate()).padStart(2,'0');
+  const nextRaceId = `${nextY}-${nextM}-${nextD}-${String(nextH).padStart(2,'0')}`;
+  
+  return {
+    currentRace: {
+      id: prevRaceId,
+      time: prevDate.getTime() - (9 * 60 * 60 * 1000), // back to UTC for client
+      ...getRaceData(prevRaceId)
+    },
+    nextRace: {
+      id: nextRaceId,
+      time: nextDate.getTime() - (9 * 60 * 60 * 1000),
+      ...getRaceData(nextRaceId)
+    }
+  };
 }
 
 export async function handleFinance(path: string, request: Request, env: Env, session: { userId: string } | null): Promise<Response | null> {
@@ -193,10 +308,17 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       return json({ reels: [reel1, reel2, reel3], multiplier, payout: amount * multiplier, newBalance });
     }
 
-    // --- Casino: Horse Racing ---
-    if (path === '/finance/gamble/horseracing') {
-      const { amount, horseIndex } = await request.json() as { amount: number, horseIndex: number };
-      if (amount <= 0 || horseIndex < 0 || horseIndex > 4) return json({ error: '無効なリクエストです' }, 400);
+    // --- Casino: Horse Racing Bet ---
+    if (path === '/finance/gamble/horseracing/bet') {
+      const { amount, horseIndex, raceId } = await request.json() as { amount: number, horseIndex: number, raceId: string };
+      if (amount <= 0 || horseIndex < 0 || horseIndex > 17 || !raceId) return json({ error: '無効なリクエストです' }, 400);
+
+      const schedule = getCurrentRaceSchedule();
+      // Can only bet on next race (or future races, but UI only shows nextRace)
+      // Allow demo bets (raceId starts with 'demo-')
+      if (raceId !== schedule.nextRace.id && !raceId.startsWith('demo-')) {
+        return json({ error: 'このレースはすでに締め切られているか、存在しません' }, 400);
+      }
 
       const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
       const finBal = parseInt(user?.finance_balance || '0');
@@ -204,15 +326,57 @@ export async function handleFinance(path: string, request: Request, env: Env, se
         return json({ error: 'ファイナンス残高が不足しています' }, 400);
       }
 
-      // 5 horses with odds
-      const odds = [2.0, 3.5, 5.0, 10.0, 20.0];
-      const weights = odds.map(o => 1 / o);
-      const totalWeight = weights.reduce((a,b) => a+b, 0);
-      let r = Math.random() * totalWeight;
-      let winningHorse = 0;
-      for (let i=0; i<weights.length; i++) {
-        r -= weights[i];
-        if (r <= 0) {
+      const betId = crypto.randomUUID();
+      await env.DB.prepare('INSERT INTO horse_bets (id, user_id, race_id, horse_index, amount) VALUES (?, ?, ?, ?, ?)')
+        .bind(betId, userId, raceId, horseIndex, amount).run();
+
+      const newBalance = finBal - amount;
+      await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
+
+      return json({ success: true, newBalance, betId });
+    }
+
+    // --- Casino: Horse Racing Claim ---
+    if (path === '/finance/gamble/horseracing/claim') {
+      // Find all pending bets that belong to past races
+      const { results: bets } = await env.DB.prepare("SELECT * FROM horse_bets WHERE user_id = ? AND status = 'pending'").bind(userId).all<{ id: string, race_id: string, horse_index: number, amount: number }>();
+      
+      const schedule = getCurrentRaceSchedule();
+      let totalClaimed = 0;
+      const claimedBetIds = [];
+      const lostBetIds = [];
+
+      for (const bet of bets) {
+        // Only process if race is finished (not nextRace)
+        if (bet.race_id !== schedule.nextRace.id && !bet.race_id.startsWith('demo-active-')) {
+          const raceData = getRaceData(bet.race_id);
+          if (raceData.winner === bet.horse_index) {
+            const payout = Math.floor(bet.amount * raceData.horses[bet.horse_index].odds);
+            totalClaimed += payout;
+            claimedBetIds.push(bet.id);
+          } else {
+            lostBetIds.push(bet.id);
+          }
+        }
+      }
+
+      // Update statuses
+      for (const id of claimedBetIds) await env.DB.prepare("UPDATE horse_bets SET status = 'won' WHERE id = ?").bind(id).run();
+      for (const id of lostBetIds) await env.DB.prepare("UPDATE horse_bets SET status = 'lost' WHERE id = ?").bind(id).run();
+
+      let newBalance = 0;
+      if (totalClaimed > 0) {
+        const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
+        newBalance = parseInt(user?.finance_balance || '0') + totalClaimed;
+        await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
+      }
+
+      return json({ success: true, claimedAmount: totalClaimed, newBalance });
+    }
+
+    // --- Demo Race (Immediate result for testing) ---
+    if (path === '/finance/gamble/horseracing/demo') {
+      const { amount, horseIndex } = await request.json() as { amount: number, horseIndex: number };
           winningHorse = i;
           break;
         }
@@ -350,7 +514,12 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       return json({ success: true, newBalance: newShoppingBalance, newFinanceBalance });
     }
   } else if (request.method === 'GET') {
-    
+    // --- Casino: Horse Racing Info ---
+    if (path === '/finance/gamble/horseracing/info') {
+      const schedule = getCurrentRaceSchedule();
+      const { results: bets } = await env.DB.prepare("SELECT * FROM horse_bets WHERE user_id = ? AND status = 'pending'").bind(userId).all();
+      return json({ schedule, bets });
+    }
     // --- Market: Assets Info ---
     if (path === '/finance/market/assets') {
       return json(MARKET_ASSETS.map(({ id, name, type, description, hasHalving }) => ({ id, name, type, description, hasHalving: hasHalving ?? false })));
