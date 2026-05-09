@@ -1,108 +1,239 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, TrendingUp, Sparkles, Clock, ShoppingBag, LogIn } from 'lucide-react';
 import { productsApi } from '../api/products';
 import { ProductCard } from '../components/product/ProductCard';
+import { useAuthStore } from '../stores/authStore';
 import type { Product } from '../types';
 import styles from './Home.module.css';
 
-const CATEGORIES = ['すべて', '電子機器', '衣類', '本', 'スポーツ', 'おもちゃ', 'インテリア', '食品', 'その他'];
+const CATEGORIES = [
+  { name: '電子機器', emoji: '📱', color: '#232f3e' },
+  { name: '衣類', emoji: '👕', color: '#37475a' },
+  { name: '本', emoji: '📚', color: '#485769' },
+  { name: 'スポーツ', emoji: '⚽', color: '#232f3e' },
+  { name: 'おもちゃ', emoji: '🎮', color: '#37475a' },
+  { name: 'インテリア', emoji: '🛋️', color: '#485769' },
+  { name: '食品', emoji: '🍱', color: '#232f3e' },
+  { name: 'その他', emoji: '📦', color: '#37475a' },
+];
+
+const HERO_SLIDES = [
+  { title: 'Mamazon へようこそ', sub: '架空のショッピングを楽しもう', cta: '商品を探す', link: '/search', bg: 'linear-gradient(135deg, #232f3e 0%, #37475a 100%)' },
+  { title: '💰 Mamazon Finance', sub: 'カジノ・投資・マイニングで資産を増やそう', cta: 'ファイナンスへ', link: '/finance', bg: 'linear-gradient(135deg, #1a0a3e 0%, #2d1b69 100%)' },
+  { title: '🏪 出品者募集中', sub: 'あなたもMamazonで商品を販売しませんか？', cta: '出品を始める', link: '/seller/register', bg: 'linear-gradient(135deg, #0a3d2e 0%, #1a6b4a 100%)' },
+];
+
+/* Horizontal scroll product row */
+const ProductRow: React.FC<{ products: Product[] }> = ({ products }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const scroll = (dir: number) => {
+    ref.current?.scrollBy({ left: dir * 300, behavior: 'smooth' });
+  };
+  if (!products.length) return null;
+  return (
+    <div className={styles.rowWrap}>
+      <button className={`${styles.rowArrow} ${styles.rowArrowLeft}`} onClick={() => scroll(-1)}><ChevronLeft size={20} /></button>
+      <div className={styles.row} ref={ref}>
+        {products.map((p) => (
+          <div key={p.id} className={styles.rowItem}>
+            <ProductCard product={p} />
+          </div>
+        ))}
+      </div>
+      <button className={`${styles.rowArrow} ${styles.rowArrowRight}`} onClick={() => scroll(1)}><ChevronRight size={20} /></button>
+    </div>
+  );
+};
 
 export const Home: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const user = useAuthStore((s) => s.user);
   const [featured, setFeatured] = useState<Product[]>([]);
-  const [category, setCategory] = useState('すべて');
-  const [sort, setSort] = useState<string>('newest');
+  const [popular, setPopular] = useState<Product[]>([]);
+  const [newest, setNewest] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Carousel
+  const [slide, setSlide] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval>>();
+
+  const nextSlide = useCallback(() => setSlide((s) => (s + 1) % HERO_SLIDES.length), []);
+  const prevSlide = useCallback(() => setSlide((s) => (s - 1 + HERO_SLIDES.length) % HERO_SLIDES.length), []);
+
+  useEffect(() => {
+    timerRef.current = setInterval(nextSlide, 5000);
+    return () => clearInterval(timerRef.current);
+  }, [nextSlide]);
+
+  // Category filter
+  const [category, setCategory] = useState('すべて');
+  const [sort, setSort] = useState('newest');
 
   useEffect(() => {
     setLoading(true);
     productsApi
-      .list({
-        category: category === 'すべて' ? undefined : category,
-        sort: sort as never,
-        limit: 24,
-      })
-      .then((res) => setProducts(res.products))
-      .catch(() => setProducts([]))
+      .list({ category: category === 'すべて' ? undefined : category, sort: sort as never, limit: 24 })
+      .then((res) => setAllProducts(res.products))
+      .catch(() => setAllProducts([]))
       .finally(() => setLoading(false));
   }, [category, sort]);
 
   useEffect(() => {
-    productsApi
-      .list({ limit: 4, sort: 'recent_bought' as never })
+    // Featured (recent bought)
+    productsApi.list({ limit: 10, sort: 'recent_bought' as never })
       .then((res) => {
-        if (res.products.length > 0) {
-          setFeatured(res.products);
-        } else {
-          productsApi.list({ limit: 4 }).then((res2) => {
-            const f = res2.products.filter((p) => p.is_featured === 1).slice(0, 4);
-            setFeatured(f.length ? f : res2.products.slice(0, 4));
-          });
-        }
-      })
-      .catch(() => {});
+        if (res.products.length > 0) setFeatured(res.products);
+        else productsApi.list({ limit: 10 }).then((r2) => setFeatured(r2.products));
+      }).catch(() => {});
+
+    // Popular (by rating)
+    productsApi.list({ limit: 10, sort: 'rating' as never })
+      .then((res) => setPopular(res.products)).catch(() => {});
+
+    // Newest
+    productsApi.list({ limit: 10, sort: 'newest' as never })
+      .then((res) => setNewest(res.products)).catch(() => {});
   }, []);
 
   return (
     <div className={styles.page}>
-      {/* Hero Banner */}
-      <section className={styles.banner}>
-        <div className={styles.bannerContent}>
-          <h1>架空のショッピングを楽しもう</h1>
-          <p>リアルな決済なし・発送なし。ロールプレイングECサイト</p>
-          <Link to="/search" className={styles.bannerBtn}>商品を探す</Link>
+      {/* === Hero Carousel === */}
+      <section className={styles.hero}>
+        {HERO_SLIDES.map((s, i) => (
+          <div key={i} className={`${styles.heroSlide} ${i === slide ? styles.heroActive : ''}`} style={{ background: s.bg }}>
+            <div className={styles.heroContent}>
+              <h1>{s.title}</h1>
+              <p>{s.sub}</p>
+              <Link to={s.link} className={styles.heroCta}>{s.cta}</Link>
+            </div>
+          </div>
+        ))}
+        <button className={`${styles.heroArrow} ${styles.heroLeft}`} onClick={prevSlide}><ChevronLeft size={36} /></button>
+        <button className={`${styles.heroArrow} ${styles.heroRight}`} onClick={nextSlide}><ChevronRight size={36} /></button>
+        <div className={styles.heroDots}>
+          {HERO_SLIDES.map((_, i) => (
+            <button key={i} className={`${styles.heroDot} ${i === slide ? styles.heroDotActive : ''}`} onClick={() => setSlide(i)} />
+          ))}
         </div>
+        <div className={styles.heroFade} />
       </section>
 
       <div className={styles.inner}>
-        {/* Featured */}
-        {featured.length > 0 && (
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>注目の商品</h2>
-            <div className={styles.grid}>
-              {featured.map((p) => <ProductCard key={p.id} product={p} />)}
+        {/* === Category Cards === */}
+        <section className={styles.catGrid}>
+          {CATEGORIES.map((c) => (
+            <Link key={c.name} to={`/search?c=${c.name}`} className={styles.catCard}>
+              <span className={styles.catEmoji}>{c.emoji}</span>
+              <span className={styles.catName}>{c.name}</span>
+            </Link>
+          ))}
+        </section>
+
+        {/* === Sign-in Banner (non-logged-in) === */}
+        {!user && (
+          <div className={styles.signInBanner}>
+            <LogIn size={20} />
+            <p>ログインしてパーソナライズされたおすすめを見る</p>
+            <Link to="/" className={styles.signInBtn}>ログイン</Link>
+          </div>
+        )}
+
+        {/* === Multi-Section Layout === */}
+        <div className={styles.multiGrid}>
+          {/* Featured */}
+          <div className={styles.sectionCard}>
+            <h2 className={styles.sectionTitle}><TrendingUp size={20} /> 注目の商品</h2>
+            <div className={styles.miniGrid}>
+              {featured.slice(0, 4).map((p) => (
+                <Link key={p.id} to={`/product/${p.id}`} className={styles.miniItem}>
+                  <img src={p.images_json ? JSON.parse(p.images_json)[0] : ''} alt={p.name} />
+                  <span>{p.name}</span>
+                </Link>
+              ))}
             </div>
+          </div>
+
+          {/* Popular */}
+          <div className={styles.sectionCard}>
+            <h2 className={styles.sectionTitle}><Sparkles size={20} /> 人気ランキング</h2>
+            <div className={styles.miniGrid}>
+              {popular.slice(0, 4).map((p) => (
+                <Link key={p.id} to={`/product/${p.id}`} className={styles.miniItem}>
+                  <img src={p.images_json ? JSON.parse(p.images_json)[0] : ''} alt={p.name} />
+                  <span>{p.name}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Newest */}
+          <div className={styles.sectionCard}>
+            <h2 className={styles.sectionTitle}><Clock size={20} /> 新着商品</h2>
+            <div className={styles.miniGrid}>
+              {newest.slice(0, 4).map((p) => (
+                <Link key={p.id} to={`/product/${p.id}`} className={styles.miniItem}>
+                  <img src={p.images_json ? JSON.parse(p.images_json)[0] : ''} alt={p.name} />
+                  <span>{p.name}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Finance CTA */}
+          <div className={`${styles.sectionCard} ${styles.financeCta}`}>
+            <h2 className={styles.sectionTitle}>💰 Mamazon Finance</h2>
+            <p className={styles.financeDesc}>カジノ・株式投資・マイニングで資産を増やそう</p>
+            <div className={styles.financeLinks}>
+              <Link to="/finance/casino" className={styles.financeLink}>🎰 カジノ</Link>
+              <Link to="/finance/market" className={styles.financeLink}>📈 マーケット</Link>
+              <Link to="/finance" className={styles.financeLink}>⛏️ マイニング</Link>
+            </div>
+          </div>
+        </div>
+
+        {/* === Horizontal Scroll Sections === */}
+        {featured.length > 0 && (
+          <section className={styles.scrollSection}>
+            <h2 className={styles.scrollTitle}><ShoppingBag size={20} /> 最近購入された商品</h2>
+            <ProductRow products={featured} />
           </section>
         )}
 
-        {/* Category & Sort */}
-        <div className={styles.controls}>
-          <div className={styles.categories}>
-            {CATEGORIES.map((c) => (
-              <button
-                key={c}
-                className={[styles.catBtn, category === c ? styles.active : ''].join(' ')}
-                onClick={() => setCategory(c)}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-          <select
-            className={styles.sortSelect}
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-          >
-            <option value="newest">新着順</option>
-            <option value="price_asc">価格（安い順）</option>
-            <option value="price_desc">価格（高い順）</option>
-            <option value="rating">評価順</option>
-          </select>
-        </div>
+        {popular.length > 0 && (
+          <section className={styles.scrollSection}>
+            <h2 className={styles.scrollTitle}><Sparkles size={20} /> 高評価の商品</h2>
+            <ProductRow products={popular} />
+          </section>
+        )}
 
-        {/* Product Grid */}
-        <section className={styles.section}>
-          {loading ? (
-            <div className={styles.loading}>
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className={styles.skeleton} />
+        {/* === All Products with Filter === */}
+        <section className={styles.allSection}>
+          <div className={styles.controls}>
+            <div className={styles.categories}>
+              {['すべて', ...CATEGORIES.map((c) => c.name)].map((c) => (
+                <button key={c} className={`${styles.catBtn} ${category === c ? styles.catBtnActive : ''}`} onClick={() => setCategory(c)}>
+                  {c}
+                </button>
               ))}
             </div>
-          ) : products.length === 0 ? (
+            <select className={styles.sortSelect} value={sort} onChange={(e) => setSort(e.target.value)}>
+              <option value="newest">新着順</option>
+              <option value="price_asc">価格（安い順）</option>
+              <option value="price_desc">価格（高い順）</option>
+              <option value="rating">評価順</option>
+            </select>
+          </div>
+
+          {loading ? (
+            <div className={styles.grid}>
+              {Array.from({ length: 8 }).map((_, i) => <div key={i} className={styles.skeleton} />)}
+            </div>
+          ) : allProducts.length === 0 ? (
             <p className={styles.empty}>商品が見つかりませんでした</p>
           ) : (
             <div className={styles.grid}>
-              {products.map((p) => <ProductCard key={p.id} product={p} />)}
+              {allProducts.map((p) => <ProductCard key={p.id} product={p} />)}
             </div>
           )}
         </section>
