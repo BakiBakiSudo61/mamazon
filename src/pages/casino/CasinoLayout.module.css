@@ -118,11 +118,27 @@
 }
 
 @media (max-width: 600px) {
+  .header {
+    padding: 0.6rem 0.5rem;
+  }
   .backBtn {
     padding: 0.4rem;
+    border: none;
+    background: transparent;
   }
   .backBtnText {
     display: none;
+  }
+  .logoText {
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+  }
+  .logoEmoji {
+    font-size: 1.1rem;
+  }
+  .balanceChip {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
   }
 }
 
