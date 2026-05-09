@@ -108,6 +108,8 @@ export const ProductDetail: React.FC = () => {
   const [reviewBody, setReviewBody] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
 
+  const [deadlineText, setDeadlineText] = useState(getDeadlineText());
+
   const addItem = useCartStore((s) => s.addItem);
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
@@ -129,6 +131,12 @@ export const ProductDetail: React.FC = () => {
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // update deadline text every minute
+  useEffect(() => {
+    const timer = setInterval(() => setDeadlineText(getDeadlineText()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   // eligibility check (runs when user is logged in)
   useEffect(() => {
@@ -346,7 +354,7 @@ export const ProductDetail: React.FC = () => {
                 </div>
                 <div className={styles.deliveryItem}>
                   <Clock size={16} />
-                  <span>{getDeadlineText()}</span>
+                  <span>{deadlineText}</span>
                 </div>
               </div>
 
@@ -436,17 +444,6 @@ export const ProductDetail: React.FC = () => {
                   <Heart size={14} fill={isFavorite(product.id) ? 'currentColor' : 'none'} />
                   {isFavorite(product.id) ? 'お気に入りから削除' : 'お気に入りに追加'}
                 </button>
-              </div>
-
-              <div className={styles.sellerInfo}>
-                <div className={styles.sellerRow}>
-                  <span className={styles.sellerLabel}>出荷元</span>
-                  <span className={styles.sellerValue}>Mamazon</span>
-                </div>
-                <div className={styles.sellerRow}>
-                  <span className={styles.sellerLabel}>販売元</span>
-                  <span className={styles.sellerValue}>{product.store_name || product.store?.store_name || '不明'}</span>
-                </div>
               </div>
 
               <div className={styles.securityNote}>
