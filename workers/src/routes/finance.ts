@@ -500,6 +500,167 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       return json({ winner: winningHorse, runnerUp, thirdPlace, horses, payout, newBalance });
     }
 
+    // --- Casino: Roulette ---
+    if (path === '/finance/gamble/roulette') {
+      const { amount, betType, betValue } = await request.json() as {
+        amount: number;
+        betType: 'number' | 'color' | 'parity' | 'column' | 'dozen' | 'half';
+        betValue: number | string;
+      };
+      if (amount <= 0) return json({ error: '無効な金額です' }, 400);
+
+      const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
+      const finBal = parseInt(user?.finance_balance || '0');
+      if (!user || finBal < amount) return json({ error: 'ファイナンス残高が不足しています' }, 400);
+
+      const result = Math.floor(Math.random() * 37); // 0-36
+      const reds = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+      const resultColor = result === 0 ? 'green' : reds.includes(result) ? 'red' : 'black';
+
+      let win = false;
+      let multiplier = 0;
+
+      if (betType === 'number' && Number(betValue) === result) { win = true; multiplier = 36; }
+      else if (betType === 'color' && betValue === resultColor && result !== 0) { win = true; multiplier = 2; }
+      else if (betType === 'parity') {
+        if (result !== 0 && ((betValue === 'odd' && result % 2 === 1) || (betValue === 'even' && result % 2 === 0))) { win = true; multiplier = 2; }
+      }
+      else if (betType === 'column' && result !== 0) {
+        const col = ((result - 1) % 3) + 1;
+        if (col === Number(betValue)) { win = true; multiplier = 3; }
+      }
+      else if (betType === 'dozen' && result !== 0) {
+        const doz = Math.ceil(result / 12);
+        if (doz === Number(betValue)) { win = true; multiplier = 3; }
+      }
+      else if (betType === 'half' && result !== 0) {
+        if ((betValue === 'low' && result <= 18) || (betValue === 'high' && result >= 19)) { win = true; multiplier = 2; }
+      }
+
+      const payout = win ? amount * multiplier : 0;
+      const newBalance = finBal - amount + payout;
+      await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
+
+      return json({ result, resultColor, win, multiplier, payout, newBalance });
+    }
+
+    // --- Casino: Blackjack ---
+    if (path === '/finance/gamble/blackjack') {
+      const { action, amount, hand: clientHand, dealerHand: clientDealerHand } = await request.json() as {
+        action: 'start' | 'hit' | 'stand';
+        amount: number;
+        hand?: number[];
+        dealerHand?: number[];
+      };
+
+      const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
+      const finBal = parseInt(user?.finance_balance || '0');
+
+      const drawCard = () => Math.floor(Math.random() * 13) + 1; // 1-13 (A=1, J/Q/K=10)
+      const cardValue = (c: number) => c > 10 ? 10 : c;
+      const handTotal = (cards: number[]) => {
+        let sum = cards.reduce((a, c) => a + cardValue(c), 0);
+        // Ace as 11 if beneficial
+        if (cards.includes(1) && sum + 10 <= 21) sum += 10;
+        return sum;
+      };
+
+      if (action === 'start') {
+        if (amount <= 0) return json({ error: '無効な金額です' }, 400);
+        if (!user || finBal < amount) return json({ error: 'ファイナンス残高が不足しています' }, 400);
+
+        const playerHand = [drawCard(), drawCard()];
+        const dealerHand = [drawCard(), drawCard()];
+        const playerTotal = handTotal(playerHand);
+
+        // Natural blackjack check
+        if (playerTotal === 21) {
+          const dealerTotal = handTotal(dealerHand);
+          const payout = dealerTotal === 21 ? amount : Math.floor(amount * 2.5);
+          const result = dealerTotal === 21 ? 'push' : 'blackjack';
+          const newBalance = finBal - amount + payout;
+          await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
+          return json({ hand: playerHand, dealerHand, playerTotal, dealerTotal, result, payout, newBalance, done: true });
+        }
+
+        return json({ hand: playerHand, dealerHand: [dealerHand[0], 0], dealerFull: dealerHand, playerTotal, done: false });
+      }
+
+      if (action === 'hit') {
+        if (!clientHand) return json({ error: '手札がありません' }, 400);
+        const newCard = drawCard();
+        const newHand = [...clientHand, newCard];
+        const total = handTotal(newHand);
+
+        if (total > 21) {
+          // Bust
+          const newBalance = finBal - amount;
+          await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
+          return json({ hand: newHand, newCard, playerTotal: total, result: 'bust', payout: 0, newBalance, done: true, dealerHand: clientDealerHand });
+        }
+
+        return json({ hand: newHand, newCard, playerTotal: total, done: false });
+      }
+
+      if (action === 'stand') {
+        if (!clientHand || !clientDealerHand) return json({ error: 'データ不足です' }, 400);
+        const playerTotal = handTotal(clientHand);
+
+        // Dealer draws until 17+
+        const dealerHand = [...clientDealerHand];
+        while (handTotal(dealerHand) < 17) {
+          dealerHand.push(drawCard());
+        }
+        const dealerTotal = handTotal(dealerHand);
+
+        let result: string;
+        let payout = 0;
+        if (dealerTotal > 21) { result = 'win'; payout = amount * 2; }
+        else if (playerTotal > dealerTotal) { result = 'win'; payout = amount * 2; }
+        else if (playerTotal === dealerTotal) { result = 'push'; payout = amount; }
+        else { result = 'lose'; payout = 0; }
+
+        const newBalance = finBal - amount + payout;
+        await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
+
+        return json({ hand: clientHand, dealerHand, playerTotal, dealerTotal, result, payout, newBalance, done: true });
+      }
+
+      return json({ error: '不正なアクションです' }, 400);
+    }
+
+    // --- Casino: Lottery ---
+    if (path === '/finance/gamble/lottery') {
+      const { amount, picks } = await request.json() as { amount: number; picks: number[] };
+      if (amount <= 0) return json({ error: '無効な金額です' }, 400);
+      if (!picks || picks.length !== 6) return json({ error: '6つの番号を選んでください' }, 400);
+      if (picks.some(n => n < 1 || n > 45 || !Number.isInteger(n))) return json({ error: '1〜45の整数を選んでください' }, 400);
+      if (new Set(picks).size !== 6) return json({ error: '重複しない番号を選んでください' }, 400);
+
+      const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
+      const finBal = parseInt(user?.finance_balance || '0');
+      if (!user || finBal < amount) return json({ error: 'ファイナンス残高が不足しています' }, 400);
+
+      // Draw 6 winning numbers
+      const pool = Array.from({ length: 45 }, (_, i) => i + 1);
+      const winning: number[] = [];
+      for (let i = 0; i < 6; i++) {
+        const idx = Math.floor(Math.random() * pool.length);
+        winning.push(pool.splice(idx, 1)[0]);
+      }
+      winning.sort((a, b) => a - b);
+
+      const matches = picks.filter(n => winning.includes(n)).length;
+      const multiplierMap: Record<number, number> = { 6: 1000000, 5: 1000, 4: 100, 3: 10, 2: 2 };
+      const multiplier = multiplierMap[matches] || 0;
+      const payout = amount * multiplier;
+      const newBalance = finBal - amount + payout;
+
+      await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
+
+      return json({ picks: picks.sort((a, b) => a - b), winning, matches, multiplier, payout, newBalance });
+    }
+
     // --- Mine Crypto ---
     if (path === '/finance/mine') {
       const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();

@@ -25,6 +25,9 @@ import { CasinoLobby } from './pages/casino/CasinoLobby';
 import { CasinoHighLow } from './pages/casino/CasinoHighLow';
 import { CasinoSlots } from './pages/casino/CasinoSlots';
 import { CasinoHorseRacing } from './pages/casino/CasinoHorseRacing';
+import { CasinoRoulette } from './pages/casino/CasinoRoulette';
+import { CasinoBlackjack } from './pages/casino/CasinoBlackjack';
+import { CasinoLottery } from './pages/casino/CasinoLottery';
 import { MarketPage } from './pages/MarketPage';
 import { Wishlist } from './pages/Wishlist';
 import { Favorites } from './pages/Favorites';
@@ -86,6 +89,9 @@ const AppRoutes: React.FC = () => {
         <Route path="highlow" element={<CasinoHighLow />} />
         <Route path="slots" element={<CasinoSlots />} />
         <Route path="horseracing" element={<CasinoHorseRacing />} />
+        <Route path="roulette" element={<CasinoRoulette />} />
+        <Route path="blackjack" element={<CasinoBlackjack />} />
+        <Route path="lottery" element={<CasinoLottery />} />
       </Route>
 
       <Route path="/finance/market" element={<RequireAuth><MarketPage /></RequireAuth>} />

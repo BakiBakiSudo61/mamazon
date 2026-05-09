@@ -123,6 +123,15 @@
 .cardHorse:hover { border-color: rgba(46, 204, 113, 0.5); box-shadow: 0 20px 40px rgba(46, 204, 113, 0.2); }
 .cardHorse:hover h3 { color: #2ecc71; }
 
+.cardRoulette:hover { border-color: rgba(241, 196, 15, 0.5); box-shadow: 0 20px 40px rgba(241, 196, 15, 0.2); }
+.cardRoulette:hover h3 { color: #f1c40f; }
+
+.cardBlackjack:hover { border-color: rgba(52, 152, 219, 0.5); box-shadow: 0 20px 40px rgba(52, 152, 219, 0.2); }
+.cardBlackjack:hover h3 { color: #3498db; }
+
+.cardLottery:hover { border-color: rgba(230, 126, 34, 0.5); box-shadow: 0 20px 40px rgba(230, 126, 34, 0.2); }
+.cardLottery:hover h3 { color: #e67e22; }
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
