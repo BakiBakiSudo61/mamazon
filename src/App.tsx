@@ -78,7 +78,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/orders" element={<Layout><RequireAuth><Orders /></RequireAuth></Layout>} />
       <Route path="/orders/:id" element={<Layout><RequireAuth><OrderDetail /></RequireAuth></Layout>} />
       <Route path="/account" element={<Layout><RequireAuth><Account /></RequireAuth></Layout>} />
-      <Route path="/finance" element={<Layout><RequireAuth><FinancePage /></RequireAuth></Layout>} />
+      <Route path="/finance" element={<RequireAuth><FinancePage /></RequireAuth>} />
       
       {/* Casino Nested Routes */}
       <Route path="/finance/casino" element={<RequireAuth><CasinoLayout /></RequireAuth>}>
@@ -88,7 +88,7 @@ const AppRoutes: React.FC = () => {
         <Route path="horseracing" element={<CasinoHorseRacing />} />
       </Route>
 
-      <Route path="/finance/market" element={<Layout><RequireAuth><MarketPage /></RequireAuth></Layout>} />
+      <Route path="/finance/market" element={<RequireAuth><MarketPage /></RequireAuth>} />
       <Route path="/seller/register" element={<Layout><RequireAuth><SellerRegister /></RequireAuth></Layout>} />
       <Route path="/seller/dashboard" element={<Layout><RequireSeller><Dashboard /></RequireSeller></Layout>} />
       <Route path="/seller/product/new" element={<Layout><RequireSeller><ProductForm mode="new" /></RequireSeller></Layout>} />

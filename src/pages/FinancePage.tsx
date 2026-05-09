@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../api/client';
-import { ArrowRightLeft, Loader, ArrowDownCircle, ArrowUpCircle, Pickaxe } from 'lucide-react';
+import { ArrowRightLeft, Loader, ArrowDownCircle, ArrowUpCircle, Pickaxe, ArrowLeft, Coins } from 'lucide-react';
 import styles from './FinancePage.module.css';
 
 type Direction = 'deposit' | 'withdraw';
@@ -124,6 +124,17 @@ export function FinancePage() {
     <div className={styles.page}>
       <div className={styles.orb1} />
       <div className={styles.orb2} />
+
+      <header className={styles.header}>
+        <Link to="/home" className={styles.backBtn}>
+          <ArrowLeft size={16} />
+          <span className={styles.backBtnText}>ホームに戻る</span>
+        </Link>
+        <div className={styles.balanceChip}>
+          <Coins size={14} />
+          ¥{finBal.toLocaleString()}
+        </div>
+      </header>
 
       <div className={styles.inner}>
         <div className={styles.titleSection}>

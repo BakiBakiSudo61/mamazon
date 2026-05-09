@@ -1,8 +1,13 @@
 import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Coins } from 'lucide-react';
+import { useAuthStore } from '../stores/authStore';
 import { Market } from '../components/finance/Market';
 import styles from './MarketPage.module.css';
 
 export function MarketPage() {
+  const { user } = useAuthStore();
+
   useEffect(() => {
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     const originalTheme = metaTheme?.getAttribute('content');
@@ -22,6 +27,16 @@ export function MarketPage() {
 
   return (
     <div className={styles.page}>
+      <header className={styles.header}>
+        <Link to="/finance" className={styles.backBtn}>
+          <ArrowLeft size={16} />
+          <span className={styles.backBtnText}>ファイナンスに戻る</span>
+        </Link>
+        <div className={styles.balanceChip}>
+          <Coins size={14} />
+          ¥{(user?.finance_balance ?? 0).toLocaleString()}
+        </div>
+      </header>
       <div className={styles.inner}>
         <Market />
       </div>
