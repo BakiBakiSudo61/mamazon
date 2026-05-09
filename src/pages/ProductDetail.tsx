@@ -18,6 +18,33 @@ import styles from './ProductDetail.module.css';
 
 const PLACEHOLDER = 'https://placehold.co/600x500/1a1a2e/e0e0e0?text=No+Image';
 
+const CONDITION_LABELS: Record<string, string> = {
+  new: '新品', like_new: '新品同様', good: '良い', fair: '普通', vintage: 'ビンテージ', junk: 'ジャンク',
+};
+
+function getDeliveryDate(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const days = ['日', '月', '火', '水', '木', '金', '土'];
+  return `${d.getMonth() + 1}月${d.getDate()}日 ${days[d.getDay()]}曜日`;
+}
+
+function getDeadlineText(): string {
+  const now = new Date();
+  const deadline = new Date(now);
+  deadline.setHours(23, 59, 0, 0);
+  const diff = deadline.getTime() - now.getTime();
+  if (diff <= 0) return '今すぐ注文';
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  return `${h}時間${m}分以内に注文した場合`;
+}
+
+function calcPoints(price: string): number {
+  try { return Math.floor(Number(BigInt(String(price).replace(/[^0-9]/g, '') || '0')) * 0.01); }
+  catch { return 0; }
+}
+
 const StarRating: React.FC<{ rating: number; size?: number }> = ({ rating, size = 16 }) => (
   <div style={{ display: 'flex', gap: 2 }}>
     {[1, 2, 3, 4, 5].map((n) => (
@@ -251,6 +278,11 @@ export const ProductDetail: React.FC = () => {
 
             <div className={styles.priceRow}>
               <span className={styles.priceValue}>{formatPrice(product.price)}</span>
+              <span className={styles.taxLabel}>税込</span>
+            </div>
+            <div className={styles.pointsRow}>
+              <span className={styles.pointsBadge}>{calcPoints(product.price).toLocaleString()}pt</span>
+              <span className={styles.pointsNote}>(1%ポイント還元)</span>
             </div>
 
             {product.is_featured === 1 && (
@@ -270,6 +302,23 @@ export const ProductDetail: React.FC = () => {
               {product.condition === 'junk' && <Badge variant="danger">古い（ジャンク）</Badge>}
             </div>
 
+            {/* Product Specs Table */}
+            <div className={styles.specsSection}>
+              <h3>商品の情報</h3>
+              <table className={styles.specsTable}>
+                <tbody>
+                  {(product.store_name || product.store?.store_name) && (
+                    <tr><th>ブランド</th><td>{product.store_name || product.store?.store_name}</td></tr>
+                  )}
+                  <tr><th>カテゴリ</th><td>{product.category}</td></tr>
+                  <tr><th>商品の状態</th><td>{CONDITION_LABELS[product.condition] || product.condition}</td></tr>
+                  <tr><th>販売元</th><td><Link to={`/store/${product.store_id}`}>{product.store_name || product.store?.store_name || '不明'}</Link></td></tr>
+                  <tr><th>出荷元</th><td>Mamazon</td></tr>
+                  {product.made_to_order === 1 && <tr><th>生産方式</th><td>受注生産</td></tr>}
+                </tbody>
+              </table>
+            </div>
+
             <div className={styles.aboutItem}>
               <h3>この商品について</h3>
               <div className={styles.description}>
@@ -286,17 +335,22 @@ export const ProductDetail: React.FC = () => {
           <div className={styles.buyBox}>
             <div className={styles.buyBoxInner}>
               <div className={styles.buyBoxPrice}>{formatPrice(product.price)}</div>
+              <div className={styles.buyBoxPoints}>{calcPoints(product.price).toLocaleString()}pt <span>(1%)</span></div>
+              
+              <div className={styles.buyBoxDivider} />
               
               <div className={styles.deliveryInfo}>
                 <div className={styles.deliveryItem}>
                   <Truck size={16} />
-                  <span>無料配送 <strong className={styles.highlight}>明日</strong></span>
+                  <span>無料配送 <strong className={styles.highlight}>{getDeliveryDate()}</strong> にお届け</span>
                 </div>
                 <div className={styles.deliveryItem}>
                   <Clock size={16} />
-                  <span>14時間30分以内に注文した場合</span>
+                  <span>{getDeadlineText()}</span>
                 </div>
               </div>
+
+              <div className={styles.buyBoxDivider} />
 
               <div className={styles.stockStatus}>
                 {product.made_to_order === 1 ? (
@@ -347,41 +401,41 @@ export const ProductDetail: React.FC = () => {
                 >
                   今すぐ買う
                 </Button>
-                
-                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                  <Button
-                    variant="secondary"
-                    fullWidth
-                    onClick={() => {
-                      if (isInWishlist(product.id)) {
-                        removeWishlist(product.id);
-                        addToast({ type: 'info', message: '欲しいものリストから削除しました' });
-                      } else {
-                        addWishlist(product);
-                        addToast({ type: 'success', message: '欲しいものリストに追加しました' });
-                      }
-                    }}
-                  >
-                    <ListPlus size={16} style={{ marginRight: '4px' }} />
-                    {isInWishlist(product.id) ? 'リスト削除' : 'リスト追加'}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    fullWidth
-                    onClick={() => {
-                      if (isFavorite(product.id)) {
-                        removeFavorite(product.id);
-                        addToast({ type: 'info', message: 'お気に入りから削除しました' });
-                      } else {
-                        addFavorite(product);
-                        addToast({ type: 'success', message: 'お気に入りに追加しました' });
-                      }
-                    }}
-                  >
-                    <Heart size={16} fill={isFavorite(product.id) ? 'currentColor' : 'none'} style={{ marginRight: '4px' }} />
-                    {isFavorite(product.id) ? 'お気に入り削除' : 'お気に入り'}
-                  </Button>
-                </div>
+              </div>
+
+              <div className={styles.buyBoxDivider} />
+
+              <div className={styles.buyBoxLinks}>
+                <button
+                  className={styles.buyBoxLink}
+                  onClick={() => {
+                    if (isInWishlist(product.id)) {
+                      removeWishlist(product.id);
+                      addToast({ type: 'info', message: '欲しいものリストから削除しました' });
+                    } else {
+                      addWishlist(product);
+                      addToast({ type: 'success', message: '欲しいものリストに追加しました' });
+                    }
+                  }}
+                >
+                  <ListPlus size={14} />
+                  {isInWishlist(product.id) ? '欲しいものリストから削除' : '欲しいものリストに追加'}
+                </button>
+                <button
+                  className={styles.buyBoxLink}
+                  onClick={() => {
+                    if (isFavorite(product.id)) {
+                      removeFavorite(product.id);
+                      addToast({ type: 'info', message: 'お気に入りから削除しました' });
+                    } else {
+                      addFavorite(product);
+                      addToast({ type: 'success', message: 'お気に入りに追加しました' });
+                    }
+                  }}
+                >
+                  <Heart size={14} fill={isFavorite(product.id) ? 'currentColor' : 'none'} />
+                  {isFavorite(product.id) ? 'お気に入りから削除' : 'お気に入りに追加'}
+                </button>
               </div>
 
               <div className={styles.sellerInfo}>
@@ -398,6 +452,11 @@ export const ProductDetail: React.FC = () => {
               <div className={styles.securityNote}>
                 <Lock size={14} />
                 <span>安全な仮想トランザクション</span>
+              </div>
+
+              <div className={styles.returnPolicy}>
+                <Shield size={14} />
+                <span>30日間の返品・交換保証</span>
               </div>
             </div>
           </div>
@@ -416,6 +475,25 @@ export const ProductDetail: React.FC = () => {
                 <p className={styles.summaryCount}>星5つ中の{product.rating.toFixed(1)}</p>
                 <p className={styles.summaryTotal}>{product.review_count}件のグローバル評価</p>
               </div>
+
+              {/* Star distribution bars */}
+              {product.review_count > 0 && (
+                <div className={styles.starBars}>
+                  {[5, 4, 3, 2, 1].map((star) => {
+                    const count = reviews.filter((r) => r.rating === star).length;
+                    const pct = reviews.length > 0 ? Math.round((count / reviews.length) * 100) : 0;
+                    return (
+                      <div key={star} className={styles.starBarRow}>
+                        <span className={styles.starBarLabel}>星{star}つ</span>
+                        <div className={styles.starBarTrack}>
+                          <div className={styles.starBarFill} style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className={styles.starBarPct}>{pct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Review CTA */}
               <div className={styles.reviewCta}>
@@ -517,6 +595,19 @@ export const ProductDetail: React.FC = () => {
             </div>
           </div>
         </section>
+      </div>
+
+      {/* Mobile Sticky Footer */}
+      <div className={styles.mobileFooter}>
+        <div className={styles.mobileFooterPrice}>{formatPrice(product.price)}</div>
+        <button
+          className={styles.mobileFooterBtn}
+          onClick={handleAddToCart}
+          disabled={addingCart || (product.made_to_order !== 1 && product.stock === 0)}
+        >
+          <ShoppingCart size={16} />
+          カートに入れる
+        </button>
       </div>
     </div>
   );

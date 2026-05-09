@@ -268,6 +268,73 @@
   color: var(--text);
 }
 
+.taxLabel {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.pointsRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pointsBadge {
+  background: var(--amazon-yellow);
+  color: #111;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.pointsNote {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* Product Specs Table */
+.specsSection {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.specsSection h3 {
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+}
+
+.specsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.specsTable th,
+.specsTable td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.specsTable th {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-weight: 600;
+  width: 130px;
+  white-space: nowrap;
+}
+
+.specsTable td {
+  color: var(--text);
+}
+
+.specsTable a {
+  color: var(--accent);
+}
+
 .primeBanner {
   background: #ffffff;
   border: 1px solid var(--border);
@@ -460,9 +527,157 @@
   gap: 0.5rem;
   color: var(--accent);
   font-size: 0.85rem;
+}
+
+.returnPolicy {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.buyBoxPoints {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.buyBoxPoints span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.buyBoxDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.25rem 0;
+}
+
+.buyBoxLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.buyBoxLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.buyBoxLink:hover {
+  text-decoration: underline;
+}
+
+/* Star distribution bars */
+.starBars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
   margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
+}
+
+.starBarRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.starBarRow:hover .starBarFill {
+  opacity: 0.8;
+}
+
+.starBarLabel {
+  font-size: 0.82rem;
+  color: var(--accent);
+  width: 50px;
+  flex-shrink: 0;
+}
+
+.starBarTrack {
+  flex: 1;
+  height: 18px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.starBarFill {
+  height: 100%;
+  background: var(--amazon-yellow);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.starBarPct {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Mobile Sticky Footer */
+.mobileFooter {
+  display: none;
+}
+
+@media (max-width: 800px) {
+  .mobileFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: #fff;
+    border-top: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.mobileFooterPrice {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.mobileFooterBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--amazon-yellow);
+  color: #111;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 100px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(15, 17, 17, 0.15);
+  transition: background 0.2s;
+}
+
+.mobileFooterBtn:hover:not(:disabled) {
+  background: var(--amazon-yellow-hover);
+}
+
+.mobileFooterBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Reviews Section */
