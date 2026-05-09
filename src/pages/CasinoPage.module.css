@@ -1,4 +1,4 @@
-﻿.page {
+.page {
   min-height: 100vh;
   background: #060010;
   position: relative;
@@ -115,6 +115,15 @@
   color: #fff;
   border-color: rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 600px) {
+  .backBtn {
+    padding: 0.4rem;
+  }
+  .backBtnText {
+    display: none;
+  }
 }
 
 .logoText {

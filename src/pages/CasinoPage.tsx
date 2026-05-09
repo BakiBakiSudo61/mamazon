@@ -1,12 +1,13 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { HighLow } from '../components/finance/HighLow';
 import { Slots } from '../components/finance/Slots';
+import { HorseRacing } from '../components/finance/HorseRacing';
 import { ArrowLeft, Coins } from 'lucide-react';
 import styles from './CasinoPage.module.css';
 
-type Game = 'highlow' | 'slots';
+type Game = 'highlow' | 'slots' | 'horseracing';
 
 export function CasinoPage() {
   const { user } = useAuthStore();
@@ -21,7 +22,7 @@ export function CasinoPage() {
 
       <header className={styles.header}>
         <Link to="/finance" className={styles.backBtn}>
-          <ArrowLeft size={16} /> ロビー
+          <ArrowLeft size={16} /> <span className={styles.backBtnText}>ロビー</span>
         </Link>
         <div className={styles.logoText}>
           <span className={styles.logoEmoji}>🎰</span>
@@ -46,11 +47,19 @@ export function CasinoPage() {
         >
           🎰 スロット
         </button>
+        <button
+          className={`${styles.gameTab} ${game === 'horseracing' ? styles.activeTab : ''}`}
+          onClick={() => setGame('horseracing')}
+        >
+          🏇 競馬
+        </button>
       </div>
 
       <main className={styles.main}>
         <div className={styles.gameContainer}>
-          {game === 'highlow' ? <HighLow /> : <Slots />}
+          {game === 'highlow' && <HighLow />}
+          {game === 'slots' && <Slots />}
+          {game === 'horseracing' && <HorseRacing />}
         </div>
       </main>
     </div>

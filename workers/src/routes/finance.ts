@@ -193,6 +193,42 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       return json({ reels: [reel1, reel2, reel3], multiplier, payout: amount * multiplier, newBalance });
     }
 
+    // --- Casino: Horse Racing ---
+    if (path === '/finance/gamble/horseracing') {
+      const { amount, horseIndex } = await request.json() as { amount: number, horseIndex: number };
+      if (amount <= 0 || horseIndex < 0 || horseIndex > 4) return json({ error: '無効なリクエストです' }, 400);
+
+      const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
+      const finBal = parseInt(user?.finance_balance || '0');
+      if (!user || finBal < amount) {
+        return json({ error: 'ファイナンス残高が不足しています' }, 400);
+      }
+
+      // 5 horses with odds
+      const odds = [2.0, 3.5, 5.0, 10.0, 20.0];
+      const weights = odds.map(o => 1 / o);
+      const totalWeight = weights.reduce((a,b) => a+b, 0);
+      let r = Math.random() * totalWeight;
+      let winningHorse = 0;
+      for (let i=0; i<weights.length; i++) {
+        r -= weights[i];
+        if (r <= 0) {
+          winningHorse = i;
+          break;
+        }
+      }
+
+      let payout = 0;
+      if (winningHorse === horseIndex) {
+        payout = Math.floor(amount * odds[horseIndex]);
+      }
+
+      const newBalance = finBal - amount + payout;
+      await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
+
+      return json({ winningHorse, payout, newBalance });
+    }
+
     // --- Mine Crypto ---
     if (path === '/finance/mine') {
       const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
