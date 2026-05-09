@@ -8,14 +8,14 @@ import type { Product } from '../types';
 import styles from './Home.module.css';
 
 const CATEGORIES = [
-  { name: '電子機器', emoji: '📱', color: '#232f3e' },
-  { name: '衣類', emoji: '👕', color: '#37475a' },
-  { name: '本', emoji: '📚', color: '#485769' },
-  { name: 'スポーツ', emoji: '⚽', color: '#232f3e' },
-  { name: 'おもちゃ', emoji: '🎮', color: '#37475a' },
-  { name: 'インテリア', emoji: '🛋️', color: '#485769' },
-  { name: '食品', emoji: '🍱', color: '#232f3e' },
-  { name: 'その他', emoji: '📦', color: '#37475a' },
+  { name: '電子機器', emoji: '📱' },
+  { name: '衣類', emoji: '👕' },
+  { name: '本', emoji: '📚' },
+  { name: 'スポーツ', emoji: '⚽' },
+  { name: 'おもちゃ', emoji: '🎮' },
+  { name: 'インテリア', emoji: '🛋️' },
+  { name: '食品', emoji: '🍱' },
+  { name: 'その他', emoji: '📦' },
 ];
 
 const HERO_SLIDES = [
@@ -46,6 +46,12 @@ const ProductRow: React.FC<{ products: Product[] }> = ({ products }) => {
   );
 };
 
+/* Mini grid image helper - extracts first image */
+function firstImg(p: Product): string {
+  try { return p.images_json ? JSON.parse(p.images_json)[0] : ''; }
+  catch { return ''; }
+}
+
 export const Home: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const [featured, setFeatured] = useState<Product[]>([]);
@@ -53,6 +59,7 @@ export const Home: React.FC = () => {
   const [newest, setNewest] = useState<Product[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
 
   // Carousel
   const [slide, setSlide] = useState(0);
@@ -66,34 +73,32 @@ export const Home: React.FC = () => {
     return () => clearInterval(timerRef.current);
   }, [nextSlide]);
 
-  // Category filter
+  // Category filter for all-products section
   const [category, setCategory] = useState('すべて');
   const [sort, setSort] = useState('newest');
 
+  // Load all products only when user opens the section
   useEffect(() => {
+    if (!showAll) return;
     setLoading(true);
     productsApi
       .list({ category: category === 'すべて' ? undefined : category, sort: sort as never, limit: 24 })
       .then((res) => setAllProducts(res.products))
       .catch(() => setAllProducts([]))
       .finally(() => setLoading(false));
-  }, [category, sort]);
+  }, [category, sort, showAll]);
 
+  // Single batch load for featured sections (3 calls merged with Promise.all)
   useEffect(() => {
-    // Featured (recent bought)
-    productsApi.list({ limit: 10, sort: 'recent_bought' as never })
-      .then((res) => {
-        if (res.products.length > 0) setFeatured(res.products);
-        else productsApi.list({ limit: 10 }).then((r2) => setFeatured(r2.products));
-      }).catch(() => {});
-
-    // Popular (by rating)
-    productsApi.list({ limit: 10, sort: 'rating' as never })
-      .then((res) => setPopular(res.products)).catch(() => {});
-
-    // Newest
-    productsApi.list({ limit: 10, sort: 'newest' as never })
-      .then((res) => setNewest(res.products)).catch(() => {});
+    Promise.all([
+      productsApi.list({ limit: 10, sort: 'recent_bought' as never }),
+      productsApi.list({ limit: 10, sort: 'rating' as never }),
+      productsApi.list({ limit: 10, sort: 'newest' as never }),
+    ]).then(([featRes, popRes, newRes]) => {
+      setFeatured(featRes.products.length > 0 ? featRes.products : newRes.products);
+      setPopular(popRes.products);
+      setNewest(newRes.products);
+    }).catch(() => {});
   }, []);
 
   return (
@@ -141,46 +146,42 @@ export const Home: React.FC = () => {
 
         {/* === Multi-Section Layout === */}
         <div className={styles.multiGrid}>
-          {/* Featured */}
           <div className={styles.sectionCard}>
             <h2 className={styles.sectionTitle}><TrendingUp size={20} /> 注目の商品</h2>
             <div className={styles.miniGrid}>
               {featured.slice(0, 4).map((p) => (
                 <Link key={p.id} to={`/product/${p.id}`} className={styles.miniItem}>
-                  <img src={p.images_json ? JSON.parse(p.images_json)[0] : ''} alt={p.name} />
+                  <img src={firstImg(p)} alt={p.name} loading="lazy" />
                   <span>{p.name}</span>
                 </Link>
               ))}
             </div>
           </div>
 
-          {/* Popular */}
           <div className={styles.sectionCard}>
             <h2 className={styles.sectionTitle}><Sparkles size={20} /> 人気ランキング</h2>
             <div className={styles.miniGrid}>
               {popular.slice(0, 4).map((p) => (
                 <Link key={p.id} to={`/product/${p.id}`} className={styles.miniItem}>
-                  <img src={p.images_json ? JSON.parse(p.images_json)[0] : ''} alt={p.name} />
+                  <img src={firstImg(p)} alt={p.name} loading="lazy" />
                   <span>{p.name}</span>
                 </Link>
               ))}
             </div>
           </div>
 
-          {/* Newest */}
           <div className={styles.sectionCard}>
             <h2 className={styles.sectionTitle}><Clock size={20} /> 新着商品</h2>
             <div className={styles.miniGrid}>
               {newest.slice(0, 4).map((p) => (
                 <Link key={p.id} to={`/product/${p.id}`} className={styles.miniItem}>
-                  <img src={p.images_json ? JSON.parse(p.images_json)[0] : ''} alt={p.name} />
+                  <img src={firstImg(p)} alt={p.name} loading="lazy" />
                   <span>{p.name}</span>
                 </Link>
               ))}
             </div>
           </div>
 
-          {/* Finance CTA */}
           <div className={`${styles.sectionCard} ${styles.financeCta}`}>
             <h2 className={styles.sectionTitle}>💰 Mamazon Finance</h2>
             <p className={styles.financeDesc}>カジノ・株式投資・マイニングで資産を増やそう</p>
@@ -207,36 +208,42 @@ export const Home: React.FC = () => {
           </section>
         )}
 
-        {/* === All Products with Filter === */}
-        <section className={styles.allSection}>
-          <div className={styles.controls}>
-            <div className={styles.categories}>
-              {['すべて', ...CATEGORIES.map((c) => c.name)].map((c) => (
-                <button key={c} className={`${styles.catBtn} ${category === c ? styles.catBtnActive : ''}`} onClick={() => setCategory(c)}>
-                  {c}
-                </button>
-              ))}
+        {/* === All Products (lazy loaded) === */}
+        {!showAll ? (
+          <button className={styles.showAllBtn} onClick={() => setShowAll(true)}>
+            すべての商品を表示する
+          </button>
+        ) : (
+          <section className={styles.allSection}>
+            <div className={styles.controls}>
+              <div className={styles.categories}>
+                {['すべて', ...CATEGORIES.map((c) => c.name)].map((c) => (
+                  <button key={c} className={`${styles.catBtn} ${category === c ? styles.catBtnActive : ''}`} onClick={() => setCategory(c)}>
+                    {c}
+                  </button>
+                ))}
+              </div>
+              <select className={styles.sortSelect} value={sort} onChange={(e) => setSort(e.target.value)}>
+                <option value="newest">新着順</option>
+                <option value="price_asc">価格（安い順）</option>
+                <option value="price_desc">価格（高い順）</option>
+                <option value="rating">評価順</option>
+              </select>
             </div>
-            <select className={styles.sortSelect} value={sort} onChange={(e) => setSort(e.target.value)}>
-              <option value="newest">新着順</option>
-              <option value="price_asc">価格（安い順）</option>
-              <option value="price_desc">価格（高い順）</option>
-              <option value="rating">評価順</option>
-            </select>
-          </div>
 
-          {loading ? (
-            <div className={styles.grid}>
-              {Array.from({ length: 8 }).map((_, i) => <div key={i} className={styles.skeleton} />)}
-            </div>
-          ) : allProducts.length === 0 ? (
-            <p className={styles.empty}>商品が見つかりませんでした</p>
-          ) : (
-            <div className={styles.grid}>
-              {allProducts.map((p) => <ProductCard key={p.id} product={p} />)}
-            </div>
-          )}
-        </section>
+            {loading ? (
+              <div className={styles.grid}>
+                {Array.from({ length: 8 }).map((_, i) => <div key={i} className={styles.skeleton} />)}
+              </div>
+            ) : allProducts.length === 0 ? (
+              <p className={styles.empty}>商品が見つかりませんでした</p>
+            ) : (
+              <div className={styles.grid}>
+                {allProducts.map((p) => <ProductCard key={p.id} product={p} />)}
+              </div>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );
