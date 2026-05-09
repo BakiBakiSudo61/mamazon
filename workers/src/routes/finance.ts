@@ -117,6 +117,7 @@ async function ensureSchema(env: Env) {
         race_id TEXT NOT NULL,
         horse_index INTEGER NOT NULL,
         horse_index_2 INTEGER,
+        horse_index_3 INTEGER,
         bet_type TEXT DEFAULT 'win',
         amount INTEGER NOT NULL,
         status TEXT DEFAULT 'pending',
@@ -183,7 +184,19 @@ function getRaceData(raceId: string) {
     }
   }
 
-  return { horses, winner, runnerUp, totalCap };
+  const totalCap3 = totalCap - horses[winner].cap - horses[runnerUp].cap;
+  let r3 = wang32(seed + 1001) * totalCap3;
+  let thirdPlace = 0;
+  for (let i = 0; i < 18; i++) {
+    if (i === winner || i === runnerUp) continue;
+    r3 -= horses[i].cap;
+    if (r3 <= 0) {
+      thirdPlace = i;
+      break;
+    }
+  }
+
+  return { horses, winner, runnerUp, thirdPlace, totalCap };
 }
 
 function getCurrentRaceSchedule() {
@@ -324,11 +337,17 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
     // --- Casino: Horse Racing Bet ---
     if (path === '/finance/gamble/horseracing/bet') {
-      const { amount, horseIndex, horseIndex2, betType, raceId } = await request.json() as { amount: number, horseIndex: number, horseIndex2?: number, betType?: string, raceId: string };
+      const { amount, horseIndex, horseIndex2, horseIndex3, betType, raceId } = await request.json() as { amount: number, horseIndex: number, horseIndex2?: number, horseIndex3?: number, betType?: string, raceId: string };
       const type = betType || 'win';
       if (amount <= 0 || horseIndex < 0 || horseIndex > 17 || !raceId) return json({ error: '無効なリクエストです' }, 400);
       if (type === 'quinella' && (horseIndex2 === undefined || horseIndex2 < 0 || horseIndex2 > 17 || horseIndex === horseIndex2)) {
         return json({ error: '馬連の指定が無効です' }, 400);
+      }
+      if (type === 'trifecta') {
+        const idxs = [horseIndex, horseIndex2, horseIndex3];
+        if (idxs.some(v => v === undefined || v < 0 || v > 17) || new Set(idxs).size !== 3) {
+          return json({ error: '三連単の指定が無効です' }, 400);
+        }
       }
 
       const schedule = getCurrentRaceSchedule();
@@ -345,8 +364,8 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       }
 
       const betId = crypto.randomUUID();
-      await env.DB.prepare('INSERT INTO horse_bets (id, user_id, race_id, horse_index, horse_index_2, bet_type, amount) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .bind(betId, userId, raceId, horseIndex, horseIndex2 ?? null, type, amount).run();
+      await env.DB.prepare('INSERT INTO horse_bets (id, user_id, race_id, horse_index, horse_index_2, horse_index_3, bet_type, amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .bind(betId, userId, raceId, horseIndex, horseIndex2 ?? null, (horseIndex3 ?? null), type, amount).run();
 
       const newBalance = finBal - amount;
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
@@ -357,7 +376,7 @@ export async function handleFinance(path: string, request: Request, env: Env, se
     // --- Casino: Horse Racing Claim ---
     if (path === '/finance/gamble/horseracing/claim') {
       // Find all pending bets that belong to past races
-      const { results: bets } = await env.DB.prepare("SELECT * FROM horse_bets WHERE user_id = ? AND status = 'pending'").bind(userId).all<{ id: string, race_id: string, horse_index: number, horse_index_2: number, bet_type: string, amount: number }>();
+      const { results: bets } = await env.DB.prepare("SELECT * FROM horse_bets WHERE user_id = ? AND status = 'pending'").bind(userId).all<{ id: string, race_id: string, horse_index: number, horse_index_2: number, horse_index_3: number, bet_type: string, amount: number }>();
       
       const schedule = getCurrentRaceSchedule();
       let totalClaimed = 0;
@@ -390,6 +409,17 @@ export async function handleFinance(path: string, request: Request, env: Env, se
               qOdds = Math.max(2.0, Math.min(1000.0, qOdds));
               payout = Math.floor(bet.amount * qOdds);
             }
+          } else if (type === 'trifecta') {
+            if (raceData.winner === bet.horse_index && raceData.runnerUp === bet.horse_index_2 && raceData.thirdPlace === bet.horse_index_3) {
+              won = true;
+              const pA = raceData.horses[bet.horse_index].cap / raceData.totalCap;
+              const pB = raceData.horses[bet.horse_index_2].cap / raceData.totalCap;
+              const pC = raceData.horses[bet.horse_index_3].cap / raceData.totalCap;
+              const prob = pA * (pB / (1 - pA)) * (pC / (1 - pA - pB));
+              let tOdds = (1 - 0.25) / prob;
+              tOdds = Math.max(5.0, Math.min(9999.0, tOdds));
+              payout = Math.floor(bet.amount * tOdds);
+            }
           }
 
           if (won) {
@@ -417,7 +447,7 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
     // --- Demo Race (Immediate result for testing) ---
     if (path === '/finance/gamble/horseracing/demo') {
-      const { amount, horseIndex, horseIndex2, betType } = await request.json() as { amount: number, horseIndex: number, horseIndex2?: number, betType?: string };
+      const { amount, horseIndex, horseIndex2, horseIndex3, betType } = await request.json() as { amount: number, horseIndex: number, horseIndex2?: number, horseIndex3?: number, betType?: string };
       const type = betType || 'win';
       if (amount <= 0 || horseIndex < 0 || horseIndex > 17) return json({ error: '無効なリクエストです' }, 400);
 
@@ -430,7 +460,7 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       // Use a random raceId for demo so each demo is different
       const demoRaceId = `demo-${Date.now()}`;
       const raceData = getRaceData(demoRaceId);
-      const { horses, winner: winningHorse, runnerUp, totalCap } = raceData;
+      const { horses, winner: winningHorse, runnerUp, thirdPlace, totalCap } = raceData;
 
       let payout = 0;
       if (type === 'win') {
@@ -448,12 +478,23 @@ export async function handleFinance(path: string, request: Request, env: Env, se
           qOdds = Math.max(2.0, Math.min(1000.0, qOdds));
           payout = Math.floor(amount * qOdds);
         }
+      } else if (type === 'trifecta') {
+        if (winningHorse === horseIndex && runnerUp === horseIndex2 && thirdPlace === horseIndex3 &&
+            horseIndex2 !== undefined && horseIndex3 !== undefined) {
+          const pA = horses[horseIndex].cap / totalCap;
+          const pB = horses[horseIndex2].cap / totalCap;
+          const pC = horses[horseIndex3].cap / totalCap;
+          const prob = pA * (pB / (1 - pA)) * (pC / (1 - pA - pB));
+          let tOdds = (1 - 0.25) / prob;
+          tOdds = Math.max(5.0, Math.min(9999.0, tOdds));
+          payout = Math.floor(amount * tOdds);
+        }
       }
 
       const newBalance = finBal - amount + payout;
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
-      return json({ winner: winningHorse, runnerUp, horses, payout, newBalance });
+      return json({ winner: winningHorse, runnerUp, thirdPlace, horses, payout, newBalance });
     }
 
     // --- Mine Crypto ---

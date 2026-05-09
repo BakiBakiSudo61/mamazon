@@ -9,7 +9,7 @@ const BET_PRESETS = [100, 500, 1000, 5000];
 export function HorseRacing() {
   const { user, fetchMe } = useAuthStore();
   const [betAmount, setBetAmount] = useState(100);
-  const [betType, setBetType] = useState<'win' | 'quinella'>('win');
+  const [betType, setBetType] = useState<'win' | 'quinella' | 'trifecta'>('win');
   const [selectedHorses, setSelectedHorses] = useState<number[]>([]);
   
   const [schedule, setSchedule] = useState<any>(null);
@@ -41,7 +41,7 @@ export function HorseRacing() {
   const handleHorseToggle = (idx: number) => {
     if (betType === 'win') {
       setSelectedHorses([idx]);
-    } else {
+    } else if (betType === 'quinella') {
       // Quinella: max 2
       if (selectedHorses.includes(idx)) {
         setSelectedHorses(selectedHorses.filter(i => i !== idx));
@@ -49,8 +49,18 @@ export function HorseRacing() {
         if (selectedHorses.length < 2) {
           setSelectedHorses([...selectedHorses, idx]);
         } else {
-          // Replace the oldest one
           setSelectedHorses([selectedHorses[1], idx]);
+        }
+      }
+    } else {
+      // Trifecta: max 3, ordered
+      if (selectedHorses.includes(idx)) {
+        setSelectedHorses(selectedHorses.filter(i => i !== idx));
+      } else {
+        if (selectedHorses.length < 3) {
+          setSelectedHorses([...selectedHorses, idx]);
+        } else {
+          setSelectedHorses([selectedHorses[1], selectedHorses[2], idx]);
         }
       }
     }
@@ -75,6 +85,7 @@ export function HorseRacing() {
     if (!schedule) return;
     if (betType === 'win' && selectedHorses.length !== 1) return alert('馬を1頭選んでください');
     if (betType === 'quinella' && selectedHorses.length !== 2) return alert('馬を2頭選んでください');
+    if (betType === 'trifecta' && selectedHorses.length !== 3) return alert('馬を3頭選んでください（1着→、2着→、3着の順に）');
 
     setActionLoading(true);
     try {
@@ -82,7 +93,8 @@ export function HorseRacing() {
         amount: betAmount,
         betType,
         horseIndex: selectedHorses[0],
-        horseIndex2: betType === 'quinella' ? selectedHorses[1] : undefined,
+        horseIndex2: betType !== 'win' ? selectedHorses[1] : undefined,
+        horseIndex3: betType === 'trifecta' ? selectedHorses[2] : undefined,
         raceId: schedule.nextRace.id
       });
       alert('馬券を購入しました！レース後に結果を確認してください。');
@@ -98,19 +110,21 @@ export function HorseRacing() {
   const runDemo = async () => {
     if (betType === 'win' && selectedHorses.length !== 1) return alert('馬を1頭選んでください');
     if (betType === 'quinella' && selectedHorses.length !== 2) return alert('馬を2頭選んでください');
+    if (betType === 'trifecta' && selectedHorses.length !== 3) return alert('馬を3頭選んでください（1着→、2着→、3着の順に）');
 
     setActionLoading(true);
     setDemoResult(null);
     setShowManbaken(false);
     setHorsePositions(Array(18).fill(0));
-    setCommentary('ゲートが開いた！各馬一斉にスタート！！');
+    setCommentary('ゲートが開いた！各馬一斌にスタート！！');
     
     try {
-      const res = await api.post<{ winner: number, runnerUp: number, payout: number, horses: any[] }>('/finance/gamble/horseracing/demo', {
+      const res = await api.post<{ winner: number, runnerUp: number, thirdPlace: number, payout: number, horses: any[] }>('/finance/gamble/horseracing/demo', {
         amount: betAmount,
         betType,
         horseIndex: selectedHorses[0],
-        horseIndex2: betType === 'quinella' ? selectedHorses[1] : undefined
+        horseIndex2: betType !== 'win' ? selectedHorses[1] : undefined,
+        horseIndex3: betType === 'trifecta' ? selectedHorses[2] : undefined,
       });
       
       setRacing(true);
@@ -122,13 +136,14 @@ export function HorseRacing() {
           let done = false;
 
           for (let i = 0; i < 18; i++) {
-            // winner and runnerUp are faster on average
-            let speed = Math.random() * 5 + 1;
-            if (i === res.winner) speed += 3.5;
-            if (i === res.runnerUp) speed += 2.5;
+            // winner, runnerUp, thirdPlace are faster on average
+            let speed = Math.random() * 2.5 + 0.5;
+            if (i === res.winner) speed += 1.8;
+            else if (i === res.runnerUp) speed += 1.3;
+            else if (i === res.thirdPlace) speed += 0.9;
 
-            // Late spurt
-            if (next[i] > 70 && i === res.winner) speed += 2; 
+            // Late spurt for winner in final stretch
+            if (next[i] > 75 && i === res.winner) speed += 1.0;
 
             next[i] = Math.min(100, next[i] + speed);
             if (next[i] > maxPos) maxPos = next[i];
@@ -136,10 +151,11 @@ export function HorseRacing() {
           }
 
           // Commentary update
-          if (maxPos > 20 && maxPos < 50) setCommentary('向正面に差し掛かりました。隊列は激しく入れ替わる！');
-          if (maxPos >= 50 && maxPos < 75) setCommentary('第3コーナーから第4コーナーへ！各馬仕掛けていく！');
-          if (maxPos >= 75 && maxPos < 95) setCommentary('最後の直線！激しい叩き合いだ！！');
-          if (maxPos >= 95) setCommentary(`先頭は${res.horses[res.winner].name}だ！そのままゴールイン！！`);
+          if (maxPos > 15 && maxPos < 40) setCommentary('第1コーナーを回る！马群は固まりつつある');
+          if (maxPos >= 40 && maxPos < 60) setCommentary('向正面に差し掛かりました。隊列は激しく入れ替わる！');
+          if (maxPos >= 60 && maxPos < 78) setCommentary('第3コーナーから第4コーナーへ！各馬仕掛けていく！');
+          if (maxPos >= 78 && maxPos < 92) setCommentary('最後の直線！激しい叩き合いだ！！どの馬が飛び出すか！！');
+          if (maxPos >= 92) setCommentary(`先頭は${res.horses[res.winner].name}だ！そのままゴールイン！！`);
 
           if (done) {
             clearInterval(interval);
@@ -150,11 +166,11 @@ export function HorseRacing() {
                 setShowManbaken(true);
               }
               fetchMe();
-            }, 1000);
+            }, 1500);
           }
           return next;
         });
-      }, 200);
+      }, 120);
       
     } catch (e: any) {
       alert(e.message || 'エラーが発生しました');
@@ -240,7 +256,7 @@ export function HorseRacing() {
         <div className={`${styles.result} ${demoResult.payout > 0 ? styles.win : styles.lose}`}>
           {demoResult.payout > 0 
             ? <><Trophy size={20} /> 的中！ +¥{demoResult.payout.toLocaleString()}</>
-            : `💸 ハズレ — 1着: ${demoResult.horses[demoResult.winner].name} / 2着: ${demoResult.horses[demoResult.runnerUp].name}`
+            : `💸 ハズレ — 1着: ${demoResult.horses[demoResult.winner].name} / 2着: ${demoResult.horses[demoResult.runnerUp].name} / 3着: ${demoResult.horses[demoResult.thirdPlace].name}`
           }
         </div>
       )}
@@ -260,6 +276,12 @@ export function HorseRacing() {
             >
               馬連 (1・2着を順不同で当てる)
             </button>
+            <button 
+              className={`${styles.betTypeBtn} ${betType === 'trifecta' ? styles.betTypeActive : ''}`}
+              onClick={() => { setBetType('trifecta'); setSelectedHorses([]); }}
+            >
+              三連単 (1・2・3着を順番通り当てる)
+            </button>
           </div>
 
           <div className={styles.horseTableWrap}>
@@ -269,7 +291,11 @@ export function HorseRacing() {
                   <th>馬番</th>
                   <th>馬名</th>
                   <th>単勝オッズ</th>
-                  <th>予想</th>
+                  <th>
+                    {betType === 'win' && '予想'}
+                    {betType === 'quinella' && '予想（2頭)'}
+                    {betType === 'trifecta' && `予想（${selectedHorses.length}/3頭）`}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -283,7 +309,10 @@ export function HorseRacing() {
                       <td className={styles.tdName}>{h.name}</td>
                       <td className={styles.tdOdds}>{h.odds.toFixed(1)}</td>
                       <td className={styles.tdCenter}>
-                        <div className={`${styles.checkbox} ${isSelected ? styles.checkboxChecked : ''}`} />
+                        {betType === 'trifecta' && isSelected
+                          ? <div className={styles.checkboxChecked} style={{ background: ['#e74c3c','#3498db','#2ecc71'][selectedHorses.indexOf(i)] }}>{selectedHorses.indexOf(i) + 1}</div>
+                          : <div className={`${styles.checkbox} ${isSelected ? styles.checkboxChecked : ''}`} />
+                        }
                       </td>
                     </tr>
                   );
@@ -301,10 +330,12 @@ export function HorseRacing() {
             <ul>
               {myBets.map((b: any) => (
                 <li key={b.id}>
-                  {b.bet_type === 'win' ? '単勝' : '馬連'} - 
+                  {b.bet_type === 'win' ? '単勝' : b.bet_type === 'quinella' ? '馬連' : '三連単'} - 
                   {b.bet_type === 'win' 
                     ? ` ${nextRace.horses[b.horse_index].no}番` 
-                    : ` ${nextRace.horses[b.horse_index].no}番 ＝ ${nextRace.horses[b.horse_index_2].no}番`}
+                    : b.bet_type === 'quinella'
+                    ? ` ${nextRace.horses[b.horse_index].no}番 ＝ ${nextRace.horses[b.horse_index_2].no}番`
+                    : ` ${nextRace.horses[b.horse_index].no}番 → ${nextRace.horses[b.horse_index_2].no}番 → ${nextRace.horses[b.horse_index_3].no}番`}
                   : ¥{b.amount.toLocaleString()}
                 </li>
               ))}
