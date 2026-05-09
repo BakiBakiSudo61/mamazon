@@ -453,7 +453,7 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       const newBalance = finBal - amount + payout;
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
-      return json({ winningHorse, runnerUp, horses, payout, newBalance });
+      return json({ winner: winningHorse, runnerUp, horses, payout, newBalance });
     }
 
     // --- Mine Crypto ---
