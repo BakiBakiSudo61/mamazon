@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Search, User, Package, Store, Menu, X, LogOut, ChevronDown, ArrowLeft, Coins, Heart, ListPlus } from 'lucide-react';
+import { ShoppingCart, Search, User, Package, Store, Menu, X, LogOut, ChevronDown, ArrowLeft, Coins, Heart, ListPlus, Crown } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore } from '../../stores/cartStore';
 import styles from './Header.module.css';
@@ -101,6 +101,9 @@ export const Header: React.FC = () => {
                     <Link to="/account" className={styles.dropdownItem}>
                       <User size={15} /> アカウント
                     </Link>
+                    <Link to="/collection" className={styles.dropdownItem}>
+                      <Crown size={15} /> コレクション
+                    </Link>
                     <Link to="/favorites" className={styles.dropdownItem}>
                       <Heart size={15} /> お気に入り
                     </Link>
@@ -175,6 +178,9 @@ export const Header: React.FC = () => {
                   </Link>
                   <Link to="/account" className={styles.dropdownItem}>
                     <User size={15} /> アカウント
+                  </Link>
+                  <Link to="/collection" className={styles.dropdownItem}>
+                    <Crown size={15} /> コレクション
                   </Link>
                   <Link to="/favorites" className={styles.dropdownItem}>
                     <Heart size={15} /> お気に入り

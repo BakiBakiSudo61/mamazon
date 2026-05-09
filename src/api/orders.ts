@@ -12,6 +12,8 @@ export const ordersApi = {
 
   list: () => api.get<{ orders: Order[] }>('/users/me/orders'),
 
+  getCollection: () => api.get<{ items: any[] }>('/users/me/collection'),
+
   returnOrder: (id: string) => api.post<Order>(`/orders/${id}/return`, {}),
 };
 

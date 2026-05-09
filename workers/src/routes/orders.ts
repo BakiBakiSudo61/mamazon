@@ -125,6 +125,20 @@ export async function handleOrders(
     return json({ orders: rows.results });
   }
 
+  // GET /users/me/collection
+  if (path === '/users/me/collection' && request.method === 'GET') {
+    const rows = await env.DB.prepare(`
+      SELECT p.*, MAX(o.created_at) as purchased_at, SUM(oi.quantity) as total_qty
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      JOIN products p ON oi.product_id = p.id
+      WHERE o.buyer_user_id = ? AND o.status != 'returned'
+      GROUP BY p.id
+      ORDER BY purchased_at DESC
+    `).bind(session.userId).all();
+    return json({ items: rows.results });
+  }
+
   // POST /orders/:id/return
   const returnMatch = path.match(/^\/orders\/([^/]+)\/return$/);
   if (returnMatch && request.method === 'POST') {
