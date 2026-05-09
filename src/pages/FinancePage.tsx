@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../api/client';
@@ -12,6 +12,28 @@ export function FinancePage() {
   const [amount, setAmount] = useState('');
   const [direction, setDirection] = useState<Direction>('deposit');
   const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [miningLoading, setMiningLoading] = useState(false);
+  const [miningPhase, setMiningPhase] = useState('');
+  const [miningProgress, setMiningProgress] = useState(0);
+  const [mineHash, setMineHash] = useState('');
+
+  useEffect(() => {
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    const originalTheme = metaTheme?.getAttribute('content');
+    const originalHtmlBg = document.documentElement.style.backgroundColor;
+    const originalBodyBg = document.body.style.backgroundColor;
+
+    metaTheme?.setAttribute('content', '#09090f');
+    document.documentElement.style.backgroundColor = '#09090f';
+    document.body.style.backgroundColor = '#09090f';
+
+    return () => {
+      metaTheme?.setAttribute('content', originalTheme || '#131921');
+      document.documentElement.style.backgroundColor = originalHtmlBg;
+      document.body.style.backgroundColor = originalBodyBg;
+    };
+  }, []);
   const [msg, setMsg] = useState('');
   const [miningLoading, setMiningLoading] = useState(false);
   const [miningPhase, setMiningPhase] = useState('');
