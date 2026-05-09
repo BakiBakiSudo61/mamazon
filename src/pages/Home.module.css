@@ -76,10 +76,10 @@
 
 .heroDots {
   position: absolute;
-  bottom: 1.25rem;
+  bottom: 2.5rem;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 3;
+  z-index: 5;
   display: flex;
   gap: 0.5rem;
 }
@@ -97,14 +97,7 @@
 .heroDotActive { background: #fff; }
 
 .heroFade {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 40px;
-  background: linear-gradient(transparent, var(--bg-main));
-  z-index: 1;
-  pointer-events: none;
+  display: none;
 }
 
 @media (max-width: 640px) {
