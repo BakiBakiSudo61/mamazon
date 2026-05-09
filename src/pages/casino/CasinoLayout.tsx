@@ -41,10 +41,6 @@ export function CasinoLayout() {
           {isLobby ? <ArrowLeft size={16} /> : <Home size={16} />}
           <span className={styles.backBtnText}>{backText}</span>
         </Link>
-        <div className={styles.logoText}>
-          <span className={styles.logoEmoji}>🎰</span>
-          <span>MAMAZON CASINO</span>
-        </div>
         <div className={styles.balanceChip}>
           <Coins size={14} />
           ¥{(user?.finance_balance ?? 0).toLocaleString()}

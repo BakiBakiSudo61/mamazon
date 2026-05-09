@@ -34,11 +34,6 @@ export function FinancePage() {
       document.body.style.backgroundColor = originalBodyBg;
     };
   }, []);
-  const [msg, setMsg] = useState('');
-  const [miningLoading, setMiningLoading] = useState(false);
-  const [miningPhase, setMiningPhase] = useState('');
-  const [miningProgress, setMiningProgress] = useState(0);
-  const [mineHash, setMineHash] = useState('');
 
   if (!user) return null;
 
