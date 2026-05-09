@@ -101,9 +101,9 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 80px;
+  height: 40px;
   background: linear-gradient(transparent, var(--bg-main));
-  z-index: 2;
+  z-index: 1;
   pointer-events: none;
 }
 
@@ -118,8 +118,8 @@
 /* ============ Inner ============ */
 .inner {
   max-width: 1500px;
-  margin: -2rem auto 0;
-  padding: 0 1rem 4rem;
+  margin: 0 auto;
+  padding: 1rem 1rem 4rem;
   position: relative;
   z-index: 4;
   display: flex;

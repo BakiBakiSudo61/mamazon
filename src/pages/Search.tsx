@@ -8,22 +8,25 @@ import styles from './Search.module.css';
 export const Search: React.FC = () => {
   const [params] = useSearchParams();
   const q = params.get('q') ?? '';
+  const c = params.get('c') ?? '';
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    productsApi.search(q, { limit: 48 })
+    productsApi.list({ q: q || undefined, category: c || undefined, limit: 48 })
       .then((r) => setProducts(r.products))
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
-  }, [q]);
+  }, [q, c]);
+
+  const titleText = c ? `「${c}」の商品` : q ? `「${q}」の検索結果` : 'すべての商品';
 
   return (
     <div className={styles.page}>
       <div className={styles.inner}>
         <h1 className={styles.title}>
-          {q ? `「${q}」の検索結果` : 'すべての商品'}
+          {titleText}
           {!loading && <span className={styles.count}>{products.length}件</span>}
         </h1>
         {loading ? (
@@ -33,7 +36,7 @@ export const Search: React.FC = () => {
             ))}
           </div>
         ) : products.length === 0 ? (
-          <p className={styles.empty}>「{q}」に一致する商品が見つかりませんでした</p>
+          <p className={styles.empty}>「{q || c}」に一致する商品が見つかりませんでした</p>
         ) : (
           <div className={styles.grid}>
             {products.map((p) => <ProductCard key={p.id} product={p} />)}
