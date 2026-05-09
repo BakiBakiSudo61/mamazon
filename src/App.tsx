@@ -20,7 +20,11 @@ import { SellerRegister } from './pages/seller/SellerRegister';
 import { Dashboard } from './pages/seller/Dashboard';
 import { ProductForm } from './pages/seller/ProductForm';
 import { FinancePage } from './pages/FinancePage';
-import { CasinoPage } from './pages/CasinoPage';
+import { CasinoLayout } from './pages/casino/CasinoLayout';
+import { CasinoLobby } from './pages/casino/CasinoLobby';
+import { CasinoHighLow } from './pages/casino/CasinoHighLow';
+import { CasinoSlots } from './pages/casino/CasinoSlots';
+import { CasinoHorseRacing } from './pages/casino/CasinoHorseRacing';
 import { MarketPage } from './pages/MarketPage';
 import { Wishlist } from './pages/Wishlist';
 import { Favorites } from './pages/Favorites';
@@ -75,7 +79,15 @@ const AppRoutes: React.FC = () => {
       <Route path="/orders/:id" element={<Layout><RequireAuth><OrderDetail /></RequireAuth></Layout>} />
       <Route path="/account" element={<Layout><RequireAuth><Account /></RequireAuth></Layout>} />
       <Route path="/finance" element={<Layout><RequireAuth><FinancePage /></RequireAuth></Layout>} />
-      <Route path="/finance/casino" element={<RequireAuth><CasinoPage /></RequireAuth>} />
+      
+      {/* Casino Nested Routes */}
+      <Route path="/finance/casino" element={<RequireAuth><CasinoLayout /></RequireAuth>}>
+        <Route index element={<CasinoLobby />} />
+        <Route path="highlow" element={<CasinoHighLow />} />
+        <Route path="slots" element={<CasinoSlots />} />
+        <Route path="horseracing" element={<CasinoHorseRacing />} />
+      </Route>
+
       <Route path="/finance/market" element={<Layout><RequireAuth><MarketPage /></RequireAuth></Layout>} />
       <Route path="/seller/register" element={<Layout><RequireAuth><SellerRegister /></RequireAuth></Layout>} />
       <Route path="/seller/dashboard" element={<Layout><RequireSeller><Dashboard /></RequireSeller></Layout>} />
