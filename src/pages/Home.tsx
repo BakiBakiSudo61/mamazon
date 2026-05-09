@@ -181,16 +181,6 @@ export const Home: React.FC = () => {
               ))}
             </div>
           </div>
-
-          <div className={`${styles.sectionCard} ${styles.financeCta}`}>
-            <h2 className={styles.sectionTitle}>💰 Mamazon Finance</h2>
-            <p className={styles.financeDesc}>カジノ・株式投資・マイニングで資産を増やそう</p>
-            <div className={styles.financeLinks}>
-              <Link to="/finance/casino" className={styles.financeLink}>🎰 カジノ</Link>
-              <Link to="/finance/market" className={styles.financeLink}>📈 マーケット</Link>
-              <Link to="/finance" className={styles.financeLink}>⛏️ マイニング</Link>
-            </div>
-          </div>
         </div>
 
         {/* === Horizontal Scroll Sections === */}
