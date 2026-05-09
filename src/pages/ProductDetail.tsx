@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Star, ShoppingCart, Shield, ChevronLeft, ChevronRight, Truck, Clock, Lock, User, Edit3, CheckCircle } from 'lucide-react';
+import { Star, ShoppingCart, Shield, ChevronLeft, ChevronRight, Truck, Clock, Lock, User, Edit3, CheckCircle, Heart, ListPlus } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { productsApi } from '../api/products';
@@ -8,6 +8,8 @@ import { ordersApi } from '../api/orders';
 import { useCartStore } from '../stores/cartStore';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
+import { useWishlistStore } from '../stores/wishlistStore';
+import { useFavoriteStore } from '../stores/favoriteStore';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import type { Product, Review } from '../types';
@@ -82,6 +84,9 @@ export const ProductDetail: React.FC = () => {
   const addItem = useCartStore((s) => s.addItem);
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
+  
+  const { addItem: addWishlist, removeItem: removeWishlist, isInWishlist } = useWishlistStore();
+  const { addItem: addFavorite, removeItem: removeFavorite, isFavorite } = useFavoriteStore();
 
   useEffect(() => {
     if (!id) return;
@@ -342,6 +347,41 @@ export const ProductDetail: React.FC = () => {
                 >
                   今すぐ買う
                 </Button>
+                
+                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                  <Button
+                    variant="secondary"
+                    fullWidth
+                    onClick={() => {
+                      if (isInWishlist(product.id)) {
+                        removeWishlist(product.id);
+                        addToast({ type: 'info', message: '欲しいものリストから削除しました' });
+                      } else {
+                        addWishlist(product);
+                        addToast({ type: 'success', message: '欲しいものリストに追加しました' });
+                      }
+                    }}
+                  >
+                    <ListPlus size={16} style={{ marginRight: '4px' }} />
+                    {isInWishlist(product.id) ? 'リスト削除' : 'リスト追加'}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    fullWidth
+                    onClick={() => {
+                      if (isFavorite(product.id)) {
+                        removeFavorite(product.id);
+                        addToast({ type: 'info', message: 'お気に入りから削除しました' });
+                      } else {
+                        addFavorite(product);
+                        addToast({ type: 'success', message: 'お気に入りに追加しました' });
+                      }
+                    }}
+                  >
+                    <Heart size={16} fill={isFavorite(product.id) ? 'currentColor' : 'none'} style={{ marginRight: '4px' }} />
+                    {isFavorite(product.id) ? 'お気に入り削除' : 'お気に入り'}
+                  </Button>
+                </div>
               </div>
 
               <div className={styles.sellerInfo}>

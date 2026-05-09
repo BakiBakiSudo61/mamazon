@@ -45,7 +45,7 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
     <Link to={`/product/${product.id}`} className={styles.card}>
       <div className={styles.imageWrap}>
         <img src={image} alt={product.name} className={styles.image} loading="lazy" />
-        {product.stock === 0 && (
+        {product.stock === 0 && product.made_to_order !== 1 && (
           <span className={styles.soldOut}>在庫なし</span>
         )}
         {product.is_featured === 1 && (
@@ -71,7 +71,7 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
             size="sm"
             onClick={handleAddToCart}
             loading={adding}
-            disabled={product.stock === 0}
+            disabled={product.stock === 0 && product.made_to_order !== 1}
           >
             <ShoppingCart size={14} />
           </Button>

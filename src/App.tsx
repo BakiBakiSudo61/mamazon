@@ -22,6 +22,8 @@ import { ProductForm } from './pages/seller/ProductForm';
 import { FinancePage } from './pages/FinancePage';
 import { CasinoPage } from './pages/CasinoPage';
 import { MarketPage } from './pages/MarketPage';
+import { Wishlist } from './pages/Wishlist';
+import { Favorites } from './pages/Favorites';
 
 const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, initialized } = useAuthStore();
@@ -62,6 +64,8 @@ const AppRoutes: React.FC = () => {
       <Route path="/search" element={<Layout><Search /></Layout>} />
       <Route path="/product/:id" element={<Layout><ProductDetail /></Layout>} />
       <Route path="/store/:id" element={<Layout><Store /></Layout>} />
+      <Route path="/wishlist" element={<Layout><Wishlist /></Layout>} />
+      <Route path="/favorites" element={<Layout><Favorites /></Layout>} />
       <Route path="/cart" element={<Layout><RequireAuth><Cart /></RequireAuth></Layout>} />
       <Route path="/checkout/*" element={<Layout><RequireAuth><Checkout /></RequireAuth></Layout>} />
       <Route path="/checkout/complete" element={<Layout><RequireAuth><OrderComplete /></RequireAuth></Layout>} />

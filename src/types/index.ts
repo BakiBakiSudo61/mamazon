@@ -120,7 +120,7 @@ export interface ProductsQuery {
   limit?: number;
   category?: string;
   q?: string;
-  sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
+  sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest' | 'recent_bought';
   min_price?: string;
   max_price?: string;
 }

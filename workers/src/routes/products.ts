@@ -39,11 +39,25 @@ export async function handleProducts(
     };
     const orderBy = orderMap[sort] ?? 'p.created_at DESC';
 
-    const rows = await env.DB.prepare(
-      `SELECT p.*, s.store_name FROM products p
-       LEFT JOIN stores s ON p.store_id = s.id
-       ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
-    ).bind(...bindings, limit, offset).all();
+    let rows;
+    if (sort === 'recent_bought') {
+      rows = await env.DB.prepare(
+        `SELECT p.*, s.store_name, MAX(o.created_at) as last_bought
+         FROM products p
+         LEFT JOIN stores s ON p.store_id = s.id
+         JOIN order_items oi ON p.id = oi.product_id
+         JOIN orders o ON oi.order_id = o.id
+         ${where}
+         GROUP BY p.id
+         ORDER BY last_bought DESC LIMIT ? OFFSET ?`
+      ).bind(...bindings, limit, offset).all();
+    } else {
+      rows = await env.DB.prepare(
+        `SELECT p.*, s.store_name FROM products p
+         LEFT JOIN stores s ON p.store_id = s.id
+         ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
+      ).bind(...bindings, limit, offset).all();
+    }
 
     const countRow = await env.DB.prepare(
       `SELECT COUNT(*) as total FROM products p ${where}`

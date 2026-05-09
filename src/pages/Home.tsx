@@ -29,10 +29,16 @@ export const Home: React.FC = () => {
 
   useEffect(() => {
     productsApi
-      .list({ limit: 4 })
+      .list({ limit: 4, sort: 'recent_bought' as never })
       .then((res) => {
-        const f = res.products.filter((p) => p.is_featured === 1).slice(0, 4);
-        setFeatured(f.length ? f : res.products.slice(0, 4));
+        if (res.products.length > 0) {
+          setFeatured(res.products);
+        } else {
+          productsApi.list({ limit: 4 }).then((res2) => {
+            const f = res2.products.filter((p) => p.is_featured === 1).slice(0, 4);
+            setFeatured(f.length ? f : res2.products.slice(0, 4));
+          });
+        }
       })
       .catch(() => {});
   }, []);

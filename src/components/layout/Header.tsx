@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Search, User, Package, Store, Menu, X, LogOut, ChevronDown, ArrowLeft, Coins } from 'lucide-react';
+import { ShoppingCart, Search, User, Package, Store, Menu, X, LogOut, ChevronDown, ArrowLeft, Coins, Heart, ListPlus } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore } from '../../stores/cartStore';
 import styles from './Header.module.css';
@@ -101,6 +101,12 @@ export const Header: React.FC = () => {
                     <Link to="/account" className={styles.dropdownItem}>
                       <User size={15} /> アカウント
                     </Link>
+                    <Link to="/favorites" className={styles.dropdownItem}>
+                      <Heart size={15} /> お気に入り
+                    </Link>
+                    <Link to="/wishlist" className={styles.dropdownItem}>
+                      <ListPlus size={15} /> 欲しいものリスト
+                    </Link>
                     {(user.role === 'seller' || user.role === 'both') && (
                       <Link to="/seller/dashboard" className={styles.dropdownItem}>
                         <Store size={15} /> 出品者ダッシュボード
@@ -169,6 +175,12 @@ export const Header: React.FC = () => {
                   </Link>
                   <Link to="/account" className={styles.dropdownItem}>
                     <User size={15} /> アカウント
+                  </Link>
+                  <Link to="/favorites" className={styles.dropdownItem}>
+                    <Heart size={15} /> お気に入り
+                  </Link>
+                  <Link to="/wishlist" className={styles.dropdownItem}>
+                    <ListPlus size={15} /> 欲しいものリスト
                   </Link>
                   {(user.role === 'seller' || user.role === 'both') && (
                     <Link to="/seller/dashboard" className={styles.dropdownItem}>
