@@ -143,7 +143,7 @@ export default {
       }
 
       // Order routes
-      if (path.startsWith('/orders') || path.startsWith('/users/me/orders')) {
+      if (path.startsWith('/orders') || path.startsWith('/users/me/orders') || path === '/users/me/collection') {
         const orderRes = await handleOrders(path, request, env, session);
         if (orderRes) {
           const headers = new Headers(orderRes.headers);
