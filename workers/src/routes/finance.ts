@@ -202,6 +202,33 @@ function getRaceData(raceId: string) {
   return { horses, winner, runnerUp, thirdPlace, totalCap };
 }
 
+/** 日付文字列 (YYYY-MM-DD) から当日の抽選番号を決定論的に生成 */
+function getDailyLotteryNumbers(dateStr: string): number[] {
+  let seed = 0;
+  for (let i = 0; i < dateStr.length; i++) seed = (seed * 31 + dateStr.charCodeAt(i)) | 0;
+  const pool = Array.from({ length: 45 }, (_, i) => i + 1);
+  const result: number[] = [];
+  for (let i = 0; i < 6; i++) {
+    const idx = Math.floor(wang32(seed + i * 17) * pool.length);
+    result.push(...pool.splice(idx, 1));
+  }
+  return result.sort((a, b) => a - b);
+}
+
+type LotteryTicket = { id: string; userId: string; picks: number[]; amount: number; drawDate: string; claimed: boolean };
+
+async function getUserLotteryTickets(env: Env, userId: string, dateStr: string): Promise<LotteryTicket[]> {
+  const listRes = await env.SESSIONS.list({ prefix: `lottery:${dateStr}:${userId}:` });
+  const tickets: LotteryTicket[] = [];
+  for (const key of listRes.keys) {
+    const raw = await env.SESSIONS.get(key.name);
+    if (raw) {
+      try { tickets.push(JSON.parse(raw) as LotteryTicket); } catch (_) { /* skip */ }
+    }
+  }
+  return tickets;
+}
+
 function getCurrentRaceSchedule() {
   const now = new Date();
   // JST conversion
@@ -629,7 +656,7 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       return json({ error: '不正なアクションです' }, 400);
     }
 
-    // --- Casino: Lottery ---
+    // --- Casino: Lottery (Daily Draw) ---
     if (path === '/finance/gamble/lottery') {
       const { amount, picks } = await request.json() as { amount: number; picks: number[] };
       if (amount <= 0) return json({ error: '無効な金額です' }, 400);
@@ -641,24 +668,116 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       const finBal = parseInt(user?.finance_balance || '0');
       if (!user || finBal < amount) return json({ error: 'ファイナンス残高が不足しています' }, 400);
 
-      // Draw 6 winning numbers
-      const pool = Array.from({ length: 45 }, (_, i) => i + 1);
-      const winning: number[] = [];
-      for (let i = 0; i < 6; i++) {
-        const idx = Math.floor(Math.random() * pool.length);
-        winning.push(pool.splice(idx, 1)[0]);
-      }
-      winning.sort((a, b) => a - b);
-
-      const matches = picks.filter(n => winning.includes(n)).length;
-      const multiplierMap: Record<number, number> = { 6: 1000000, 5: 1000, 4: 100, 3: 10, 2: 2 };
-      const multiplier = multiplierMap[matches] || 0;
-      const payout = amount * multiplier;
-      const newBalance = finBal - amount + payout;
-
+      // Deduct balance now
+      const newBalance = finBal - amount;
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
-      return json({ picks: picks.sort((a, b) => a - b), winning, matches, multiplier, payout, newBalance });
+      // Get today's draw date (JST)
+      const now = new Date();
+      const jstHour = (now.getUTCHours() + 9) % 24;
+      // If past 21:00 JST, tickets go to tomorrow's draw
+      const jstDate = new Date(now.getTime() + 9 * 3600000);
+      if (jstHour >= 21) jstDate.setDate(jstDate.getDate() + 1);
+      const drawDate = jstDate.toISOString().slice(0, 10); // YYYY-MM-DD
+
+      // Store ticket in KV
+      const ticketId = crypto.randomUUID();
+      const ticket = { id: ticketId, userId, picks: picks.sort((a, b) => a - b), amount, drawDate, claimed: false };
+      await env.SESSIONS.put(`lottery:${drawDate}:${userId}:${ticketId}`, JSON.stringify(ticket), { expirationTtl: 7 * 86400 });
+
+      // Get user's ticket count for this draw
+      const listRes = await env.SESSIONS.list({ prefix: `lottery:${drawDate}:${userId}:` });
+
+      return json({ ticket, drawDate, ticketCount: listRes.keys.length, newBalance });
+    }
+
+    if (path === '/finance/gamble/lottery/status') {
+      // Get today's draw status
+      const now = new Date();
+      const jstNow = new Date(now.getTime() + 9 * 3600000);
+      const jstHour = jstNow.getUTCHours();
+      const jstMin = jstNow.getUTCMinutes();
+      const todayDate = jstNow.toISOString().slice(0, 10);
+
+      // Check if draw has happened (21:00 JST)
+      const drawn = jstHour >= 21 || (jstHour === 21 && jstMin >= 0);
+
+      // Yesterday's draw (if before 21:00, show yesterday's results)
+      const yesterdayDate = new Date(jstNow.getTime() - 86400000).toISOString().slice(0, 10);
+      const activeDrawDate = drawn ? todayDate : todayDate;
+      const resultsDrawDate = drawn ? todayDate : yesterdayDate;
+
+      // Get winning numbers (deterministic from date)
+      const winning = getDailyLotteryNumbers(resultsDrawDate);
+
+      // Get user's tickets for today and results draw
+      const todayTickets = await getUserLotteryTickets(env, userId, activeDrawDate);
+      const resultTickets = await getUserLotteryTickets(env, userId, resultsDrawDate);
+
+      // Calculate next draw time
+      const nextDraw = new Date(jstNow);
+      if (drawn) {
+        nextDraw.setDate(nextDraw.getDate() + 1);
+      }
+      nextDraw.setUTCHours(12, 0, 0, 0); // 21:00 JST = 12:00 UTC
+      const nextDrawISO = new Date(nextDraw.getTime() - 9 * 3600000).toISOString();
+
+      return json({
+        drawn,
+        drawDate: resultsDrawDate,
+        nextDraw: nextDrawISO,
+        winning: drawn ? winning : null,
+        todayTickets,
+        resultTickets: drawn ? resultTickets.map(t => ({
+          ...t,
+          winning,
+          matches: t.picks.filter((n: number) => winning.includes(n)).length,
+        })) : resultTickets,
+      });
+    }
+
+    if (path === '/finance/gamble/lottery/claim') {
+      // Claim all unclaimed winning tickets
+      const now = new Date();
+      const jstNow = new Date(now.getTime() + 9 * 3600000);
+      const jstHour = jstNow.getUTCHours();
+
+      // Can only claim after draw (21:00 JST)
+      // Check last 7 days of draws
+      let totalPayout = 0;
+      const claimed: string[] = [];
+
+      for (let d = 0; d < 7; d++) {
+        const checkDate = new Date(jstNow.getTime() - d * 86400000);
+        // Skip today if before 21:00
+        if (d === 0 && jstHour < 21) continue;
+        const dateStr = checkDate.toISOString().slice(0, 10);
+        const winning = getDailyLotteryNumbers(dateStr);
+        const tickets = await getUserLotteryTickets(env, userId, dateStr);
+
+        for (const ticket of tickets) {
+          if (ticket.claimed) continue;
+          const matches = ticket.picks.filter((n: number) => winning.includes(n)).length;
+          const multiplierMap: Record<number, number> = { 6: 1000000, 5: 1000, 4: 100, 3: 10, 2: 2 };
+          const multiplier = multiplierMap[matches] || 0;
+          if (multiplier > 0) {
+            totalPayout += ticket.amount * multiplier;
+            claimed.push(ticket.id);
+          }
+          // Mark as claimed
+          ticket.claimed = true;
+          await env.SESSIONS.put(`lottery:${dateStr}:${userId}:${ticket.id}`, JSON.stringify(ticket), { expirationTtl: 7 * 86400 });
+        }
+      }
+
+      if (totalPayout > 0) {
+        const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
+        const newBalance = parseInt(user?.finance_balance || '0') + totalPayout;
+        await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
+        return json({ totalPayout, claimed: claimed.length, newBalance });
+      }
+
+      return json({ totalPayout: 0, claimed: 0 });
     }
 
     // --- Mine Crypto ---
