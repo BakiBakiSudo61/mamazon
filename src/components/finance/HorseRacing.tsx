@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
 import { Loader, Trophy, Megaphone, Zap } from 'lucide-react';
