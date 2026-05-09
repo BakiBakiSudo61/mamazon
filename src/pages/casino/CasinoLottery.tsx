@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
 import styles from './CasinoGames.module.css';
 
 export function CasinoLottery() {
-  const refreshBalance = useAuthStore((s) => s.fetchUser);
+  const refreshBalance = useAuthStore((s) => s.fetchMe);
   const [amount, setAmount] = useState(1000);
   const [picks, setPicks] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);

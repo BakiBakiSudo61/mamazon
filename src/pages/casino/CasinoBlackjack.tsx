@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
 import styles from './CasinoGames.module.css';
@@ -10,7 +10,7 @@ const cardSuit = (n: number, i: number) => SUITS[(n + i) % 4];
 const cardVal = (n: number) => n > 10 ? 10 : n;
 
 export function CasinoBlackjack() {
-  const refreshBalance = useAuthStore((s) => s.fetchUser);
+  const refreshBalance = useAuthStore((s) => s.fetchMe);
   const [amount, setAmount] = useState(1000);
   const [hand, setHand] = useState<number[]>([]);
   const [dealerHand, setDealerHand] = useState<number[]>([]);

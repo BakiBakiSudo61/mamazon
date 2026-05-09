@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
 import styles from './CasinoGames.module.css';
@@ -9,7 +9,7 @@ const numColor = (n: number) => n === 0 ? 'green' : REDS.includes(n) ? 'red' : '
 type BetType = 'color' | 'parity' | 'half' | 'dozen' | 'column' | 'number';
 
 export function CasinoRoulette() {
-  const refreshBalance = useAuthStore((s) => s.fetchUser);
+  const refreshBalance = useAuthStore((s) => s.fetchMe);
   const [amount, setAmount] = useState(1000);
   const [betType, setBetType] = useState<BetType>('color');
   const [betValue, setBetValue] = useState<string | number>('red');
