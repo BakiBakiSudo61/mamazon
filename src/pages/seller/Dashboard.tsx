@@ -248,6 +248,7 @@ export const Dashboard: React.FC = () => {
             <div className={styles.salesList}>
               <div className={styles.salesListHeader}>
                 <span>商品</span>
+                <span className={styles.salesColBuyer}>購入者</span>
                 <span className={styles.salesColQty}>数量</span>
                 <span className={styles.salesColPrice}>金額</span>
                 <span className={styles.salesColStatus}>ステータス</span>
@@ -277,6 +278,7 @@ export const Dashboard: React.FC = () => {
                         {s.product_name}
                       </Link>
                     </div>
+                    <span className={styles.salesColBuyer}>{s.buyer_name || '匿名ユーザー'}</span>
                     <span className={styles.salesColQty}>{s.quantity}個</span>
                     <span className={styles.salesColPrice}>{formatPrice(total)}</span>
                     <span className={styles.salesColStatus}>

@@ -48,10 +48,12 @@ export async function handleSeller(
       SELECT
         oi.id, oi.order_id, oi.quantity, oi.unit_price,
         o.created_at AS order_date, o.status,
-        p.id AS product_id, p.name AS product_name, p.images_json
+        p.id AS product_id, p.name AS product_name, p.images_json,
+        u.display_name AS buyer_name, u.email AS buyer_email
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
       JOIN products p ON oi.product_id = p.id
+      LEFT JOIN users u ON o.buyer_user_id = u.id
       WHERE p.store_id = ?
       ORDER BY o.created_at DESC
       LIMIT 100

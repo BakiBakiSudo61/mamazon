@@ -76,6 +76,8 @@ export interface SellerSaleItem {
   product_id: string;
   product_name: string;
   images_json?: string;
+  buyer_name?: string;
+  buyer_email?: string;
 }
 
 export interface Review {
