@@ -1,5 +1,15 @@
 import type { Env, SessionData } from '../types';
 
+/** HTMLタグとスクリプトを除去する最小サニタイザー */
+function sanitizeText(input: unknown, maxLen = 2000): string | null {
+  if (input === null || input === undefined) return null;
+  return String(input)
+    .replace(/<[^>]*>/g, '')   // タグ除去
+    .replace(/javascript:/gi, '') // js: スキーム除去
+    .trim()
+    .slice(0, maxLen);
+}
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -80,7 +90,7 @@ export async function handleSeller(
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id, store.id,
-      body.name, body.description ?? null,
+      sanitizeText(body.name, 200), sanitizeText(body.description),
       priceStr, body.stock ?? 0,
       body.made_to_order ? 1 : 0,
       body.category ?? 'その他',
@@ -113,7 +123,7 @@ export async function handleSeller(
         category = ?, condition = ?, is_featured = ?, images_json = ?
       WHERE id = ? AND store_id = ?
     `).bind(
-      body.name, body.description ?? null,
+      sanitizeText(body.name, 200), sanitizeText(body.description),
       priceStr, body.stock ?? 0,
       body.made_to_order ? 1 : 0,
       body.category, body.condition ?? 'new',

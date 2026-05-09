@@ -27,12 +27,30 @@ function corsHeaders(origin: string, env?: Env) {
   };
 }
 
+function securityHeaders() {
+  return {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'geolocation=(), camera=(), microphone=()',
+  };
+}
+
+function withHeaders(res: Response, origin: string, env?: Env): Response {
+  const headers = new Headers(res.headers);
+  Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
+  Object.entries(securityHeaders()).forEach(([k, v]) => headers.set(k, v));
+  return new Response(res.body, { status: res.status, headers });
+}
+
 function json(data: unknown, status = 200, origin = '') {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       'Content-Type': 'application/json',
       ...corsHeaders(origin),
+      ...securityHeaders(),
     },
   });
 }
@@ -44,7 +62,7 @@ export default {
 
     // CORS preflight
     if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders(origin, env) });
+      return new Response(null, { status: 204, headers: { ...corsHeaders(origin, env), ...securityHeaders() } });
     }
 
     // Strip /v1 prefix
@@ -57,15 +75,7 @@ export default {
     try {
       // Auth routes (no session required)
       const authRes = await handleAuth(path, request, env);
-      if (authRes) {
-        // Add CORS headers to auth responses
-        const headers = new Headers(authRes.headers);
-        Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
-        return new Response(authRes.body, {
-          status: authRes.status,
-          headers,
-        });
-      }
+      if (authRes) return withHeaders(authRes, origin, env);
 
       // R2 image proxy (no auth required)
       if (path.startsWith('/images/') && request.method === 'GET') {
@@ -78,6 +88,7 @@ export default {
             'Content-Type': obj.httpMetadata?.contentType ?? 'application/octet-stream',
             'Cache-Control': 'public, max-age=31536000, immutable',
             ...corsHeaders(origin, env),
+            ...securityHeaders(),
           },
         });
       }
@@ -110,11 +121,7 @@ export default {
       // Public product routes
       const session = await getSession(request, env);
       const productRes = await handleProducts(path, request, env, session);
-      if (productRes) {
-        const headers = new Headers(productRes.headers);
-        Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
-        return new Response(productRes.body, { status: productRes.status, headers });
-      }
+      if (productRes) return withHeaders(productRes, origin, env);
 
       // Public store routes (GET only)
       if (
@@ -122,11 +129,7 @@ export default {
         request.method === 'GET'
       ) {
         const sellerRes = await handleSeller(path, request, env, session ?? { userId: '', email: '', exp: 0 });
-        if (sellerRes) {
-          const headers = new Headers(sellerRes.headers);
-          Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
-          return new Response(sellerRes.body, { status: sellerRes.status, headers });
-        }
+        if (sellerRes) return withHeaders(sellerRes, origin, env);
       }
 
       // Auth-required routes
@@ -135,51 +138,31 @@ export default {
       // Cart routes
       if (path.startsWith('/cart')) {
         const cartRes = await handleCart(path, request, env, session);
-        if (cartRes) {
-          const headers = new Headers(cartRes.headers);
-          Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
-          return new Response(cartRes.body, { status: cartRes.status, headers });
-        }
+        if (cartRes) return withHeaders(cartRes, origin, env);
       }
 
       // Order routes
       if (path.startsWith('/orders') || path.startsWith('/users/me/orders') || path === '/users/me/collection') {
         const orderRes = await handleOrders(path, request, env, session);
-        if (orderRes) {
-          const headers = new Headers(orderRes.headers);
-          Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
-          return new Response(orderRes.body, { status: orderRes.status, headers });
-        }
+        if (orderRes) return withHeaders(orderRes, origin, env);
       }
 
       // Seller / store management routes
       if (path.startsWith('/seller') || path.startsWith('/stores')) {
         const sellerRes = await handleSeller(path, request, env, session);
-        if (sellerRes) {
-          const headers = new Headers(sellerRes.headers);
-          Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
-          return new Response(sellerRes.body, { status: sellerRes.status, headers });
-        }
+        if (sellerRes) return withHeaders(sellerRes, origin, env);
       }
 
       // Upload
       if (path.startsWith('/upload')) {
         const uploadRes = await handleUpload(path, request, env, session);
-        if (uploadRes) {
-          const headers = new Headers(uploadRes.headers);
-          Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
-          return new Response(uploadRes.body, { status: uploadRes.status, headers });
-        }
+        if (uploadRes) return withHeaders(uploadRes, origin, env);
       }
 
       // Finance & Market
       if (path.startsWith('/finance')) {
         const financeRes = await handleFinance(path, request, env, session);
-        if (financeRes) {
-          const headers = new Headers(financeRes.headers);
-          Object.entries(corsHeaders(origin, env)).forEach(([k, v]) => headers.set(k, v));
-          return new Response(financeRes.body, { status: financeRes.status, headers });
-        }
+        if (financeRes) return withHeaders(financeRes, origin, env);
       }
 
       return json({ error: 'Not Found' }, 404, origin);

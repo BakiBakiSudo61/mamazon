@@ -1,6 +1,16 @@
 import type { Env } from '../types';
 import type { SessionData } from '../types';
 
+/** HTMLタグとスクリプトを除去する最小サニタイザー */
+function sanitizeText(input: unknown, maxLen = 1000): string | null {
+  if (input === null || input === undefined) return null;
+  return String(input)
+    .replace(/<[^>]*>/g, '')
+    .replace(/javascript:/gi, '')
+    .trim()
+    .slice(0, maxLen) || null;
+}
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -156,7 +166,7 @@ export async function handleProducts(
     await env.DB.prepare(
       `INSERT INTO reviews (id, product_id, user_id, order_id, rating, title, body)
        VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).bind(id, productId, session.userId, orderRow.order_id, body.rating, body.title ?? null, body.body ?? null).run();
+    ).bind(id, productId, session.userId, orderRow.order_id, body.rating, sanitizeText(body.title, 100), sanitizeText(body.body, 2000)).run();
 
     await env.DB.prepare(`
       UPDATE products SET
