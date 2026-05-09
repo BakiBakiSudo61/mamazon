@@ -56,7 +56,7 @@ export const Home: React.FC = () => {
 
   // Carousel
   const [slide, setSlide] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const nextSlide = useCallback(() => setSlide((s) => (s + 1) % HERO_SLIDES.length), []);
   const prevSlide = useCallback(() => setSlide((s) => (s - 1 + HERO_SLIDES.length) % HERO_SLIDES.length), []);
