@@ -116,6 +116,8 @@ async function ensureSchema(env: Env) {
         user_id TEXT NOT NULL,
         race_id TEXT NOT NULL,
         horse_index INTEGER NOT NULL,
+        horse_index_2 INTEGER,
+        bet_type TEXT DEFAULT 'win',
         amount INTEGER NOT NULL,
         status TEXT DEFAULT 'pending',
         created_at TEXT DEFAULT (datetime('now'))
@@ -158,7 +160,7 @@ function getRaceData(raceId: string) {
     horses[i].odds = Math.round(odds * 10) / 10;
   }
 
-  // Determine winner deterministically
+  // Determine winner and runnerUp deterministically
   let r = wang32(seed + 999) * totalCap;
   let winner = 0;
   for (let i = 0; i < 18; i++) {
@@ -169,7 +171,19 @@ function getRaceData(raceId: string) {
     }
   }
 
-  return { horses, winner };
+  let totalCap2 = totalCap - horses[winner].cap;
+  let r2 = wang32(seed + 1000) * totalCap2;
+  let runnerUp = 0;
+  for (let i = 0; i < 18; i++) {
+    if (i === winner) continue;
+    r2 -= horses[i].cap;
+    if (r2 <= 0) {
+      runnerUp = i;
+      break;
+    }
+  }
+
+  return { horses, winner, runnerUp, totalCap };
 }
 
 function getCurrentRaceSchedule() {
@@ -310,8 +324,12 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
     // --- Casino: Horse Racing Bet ---
     if (path === '/finance/gamble/horseracing/bet') {
-      const { amount, horseIndex, raceId } = await request.json() as { amount: number, horseIndex: number, raceId: string };
+      const { amount, horseIndex, horseIndex2, betType, raceId } = await request.json() as { amount: number, horseIndex: number, horseIndex2?: number, betType?: string, raceId: string };
+      const type = betType || 'win';
       if (amount <= 0 || horseIndex < 0 || horseIndex > 17 || !raceId) return json({ error: '無効なリクエストです' }, 400);
+      if (type === 'quinella' && (horseIndex2 === undefined || horseIndex2 < 0 || horseIndex2 > 17 || horseIndex === horseIndex2)) {
+        return json({ error: '馬連の指定が無効です' }, 400);
+      }
 
       const schedule = getCurrentRaceSchedule();
       // Can only bet on next race (or future races, but UI only shows nextRace)
@@ -327,8 +345,8 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       }
 
       const betId = crypto.randomUUID();
-      await env.DB.prepare('INSERT INTO horse_bets (id, user_id, race_id, horse_index, amount) VALUES (?, ?, ?, ?, ?)')
-        .bind(betId, userId, raceId, horseIndex, amount).run();
+      await env.DB.prepare('INSERT INTO horse_bets (id, user_id, race_id, horse_index, horse_index_2, bet_type, amount) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .bind(betId, userId, raceId, horseIndex, horseIndex2 ?? null, type, amount).run();
 
       const newBalance = finBal - amount;
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
@@ -339,7 +357,7 @@ export async function handleFinance(path: string, request: Request, env: Env, se
     // --- Casino: Horse Racing Claim ---
     if (path === '/finance/gamble/horseracing/claim') {
       // Find all pending bets that belong to past races
-      const { results: bets } = await env.DB.prepare("SELECT * FROM horse_bets WHERE user_id = ? AND status = 'pending'").bind(userId).all<{ id: string, race_id: string, horse_index: number, amount: number }>();
+      const { results: bets } = await env.DB.prepare("SELECT * FROM horse_bets WHERE user_id = ? AND status = 'pending'").bind(userId).all<{ id: string, race_id: string, horse_index: number, horse_index_2: number, bet_type: string, amount: number }>();
       
       const schedule = getCurrentRaceSchedule();
       let totalClaimed = 0;
@@ -350,8 +368,31 @@ export async function handleFinance(path: string, request: Request, env: Env, se
         // Only process if race is finished (not nextRace)
         if (bet.race_id !== schedule.nextRace.id && !bet.race_id.startsWith('demo-active-')) {
           const raceData = getRaceData(bet.race_id);
-          if (raceData.winner === bet.horse_index) {
-            const payout = Math.floor(bet.amount * raceData.horses[bet.horse_index].odds);
+          const type = bet.bet_type || 'win';
+          
+          let won = false;
+          let payout = 0;
+          
+          if (type === 'win') {
+            if (raceData.winner === bet.horse_index) {
+              won = true;
+              payout = Math.floor(bet.amount * raceData.horses[bet.horse_index].odds);
+            }
+          } else if (type === 'quinella') {
+            const isWinnerSet = (raceData.winner === bet.horse_index && raceData.runnerUp === bet.horse_index_2) ||
+                                (raceData.winner === bet.horse_index_2 && raceData.runnerUp === bet.horse_index);
+            if (isWinnerSet) {
+              won = true;
+              const pA = raceData.horses[bet.horse_index].cap / raceData.totalCap;
+              const pB = raceData.horses[bet.horse_index_2].cap / raceData.totalCap;
+              const prob = pA * (pB / (1 - pA)) + pB * (pA / (1 - pB));
+              let qOdds = (1 - 0.20) / prob;
+              qOdds = Math.max(2.0, Math.min(1000.0, qOdds));
+              payout = Math.floor(bet.amount * qOdds);
+            }
+          }
+
+          if (won) {
             totalClaimed += payout;
             claimedBetIds.push(bet.id);
           } else {
@@ -376,7 +417,8 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
     // --- Demo Race (Immediate result for testing) ---
     if (path === '/finance/gamble/horseracing/demo') {
-      const { amount, horseIndex } = await request.json() as { amount: number, horseIndex: number };
+      const { amount, horseIndex, horseIndex2, betType } = await request.json() as { amount: number, horseIndex: number, horseIndex2?: number, betType?: string };
+      const type = betType || 'win';
       if (amount <= 0 || horseIndex < 0 || horseIndex > 17) return json({ error: '無効なリクエストです' }, 400);
 
       const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
@@ -387,17 +429,31 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
       // Use a random raceId for demo so each demo is different
       const demoRaceId = `demo-${Date.now()}`;
-      const { horses, winner: winningHorse } = getRaceData(demoRaceId);
+      const raceData = getRaceData(demoRaceId);
+      const { horses, winner: winningHorse, runnerUp, totalCap } = raceData;
 
       let payout = 0;
-      if (winningHorse === horseIndex) {
-        payout = Math.floor(amount * horses[horseIndex].odds);
+      if (type === 'win') {
+        if (winningHorse === horseIndex) {
+          payout = Math.floor(amount * horses[horseIndex].odds);
+        }
+      } else if (type === 'quinella') {
+        const isWinnerSet = (winningHorse === horseIndex && runnerUp === horseIndex2) ||
+                            (winningHorse === horseIndex2 && runnerUp === horseIndex);
+        if (isWinnerSet && horseIndex2 !== undefined) {
+          const pA = horses[horseIndex].cap / totalCap;
+          const pB = horses[horseIndex2].cap / totalCap;
+          const prob = pA * (pB / (1 - pA)) + pB * (pA / (1 - pB));
+          let qOdds = (1 - 0.20) / prob;
+          qOdds = Math.max(2.0, Math.min(1000.0, qOdds));
+          payout = Math.floor(amount * qOdds);
+        }
       }
 
       const newBalance = finBal - amount + payout;
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
-      return json({ winningHorse, horses, payout, newBalance });
+      return json({ winningHorse, runnerUp, horses, payout, newBalance });
     }
 
     // --- Mine Crypto ---

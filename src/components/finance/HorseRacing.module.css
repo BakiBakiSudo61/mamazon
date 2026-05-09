@@ -8,6 +8,7 @@
   gap: 1.5rem;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(10px);
+  position: relative;
 }
 
 .title {
@@ -25,6 +26,33 @@
   color: rgba(255, 255, 255, 0.7);
   text-align: center;
   font-size: 0.85rem;
+}
+
+/* Bet Type Selector */
+.betTypeSelector {
+  display: flex;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  padding: 0.4rem;
+  gap: 0.4rem;
+}
+
+.betTypeBtn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #aaa;
+  padding: 0.8rem;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.betTypeActive {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(52, 152, 219, 0.4);
 }
 
 /* Info Banner */
@@ -126,7 +154,7 @@
   background: rgba(255, 255, 255, 0.03);
 }
 .selectedRow {
-  background: rgba(255, 215, 0, 0.1) !important;
+  background: rgba(255, 215, 0, 0.15) !important;
 }
 .tdCenter {
   text-align: center;
@@ -152,29 +180,50 @@
   font-weight: bold;
   font-size: 0.8rem;
 }
-.radio {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
+.checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   margin: 0 auto;
   position: relative;
+  transition: all 0.2s;
 }
-.radioChecked {
+.checkboxChecked {
   border-color: #FFD700;
-}
-.radioChecked::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  right: 3px;
-  bottom: 3px;
   background: #FFD700;
-  border-radius: 50%;
+}
+.checkboxChecked::after {
+  content: '✓';
+  position: absolute;
+  top: -2px;
+  left: 2px;
+  color: #000;
+  font-weight: bold;
 }
 
-/* Track Area */
+/* Track Area & Commentary */
+.racingContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.commentaryBox {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #FFD700;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #FFD700;
+  font-weight: bold;
+  font-size: 1.1rem;
+  animation: pulse border 1.5s infinite;
+}
+
 .trackArea {
   background: #1a0f2e;
   border-radius: 12px;
@@ -237,12 +286,56 @@
   top: 50%;
   margin-top: -10px;
   z-index: 2;
-  transition: left 0.15s linear, transform 0.15s linear;
+  transition: left 0.2s linear, transform 0.2s linear;
 }
 
 .horse {
   font-size: 1rem;
   line-height: 1;
+}
+
+/* Manbaken Flash */
+.manbakenOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  animation: flashIn 0.5s ease-out;
+}
+.manbakenText {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 3rem;
+  font-weight: 900;
+  color: #FFD700;
+  text-shadow: 0 0 30px #FFD700, 0 0 60px #FF8C00;
+  animation: tremble 0.1s infinite;
+}
+.manbakenOverlay p {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+  margin-top: 1rem;
+}
+
+@keyframes flashIn {
+  0% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes tremble {
+  0% { transform: translate(1px, 1px) rotate(0deg); }
+  25% { transform: translate(-1px, -2px) rotate(-1deg); }
+  50% { transform: translate(-3px, 0px) rotate(1deg); }
+  75% { transform: translate(2px, 2px) rotate(0deg); }
+  100% { transform: translate(1px, -1px) rotate(0deg); }
 }
 
 /* Controls */
@@ -383,6 +476,10 @@
   font-weight: 800;
   font-size: 1.1rem;
   animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .win {
@@ -400,4 +497,8 @@
 @keyframes popIn {
   0% { opacity: 0; transform: scale(0.9); }
   100% { opacity: 1; transform: scale(1); }
+}
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
