@@ -134,6 +134,9 @@ async function ensureSchema(env: Env) {
   try {
     await env.DB.prepare(`ALTER TABLE horse_bets ADD COLUMN bet_type TEXT DEFAULT 'win'`).run();
   } catch (_) { /* column already exists */ }
+  try {
+    await env.DB.prepare(`ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0`).run();
+  } catch (_) { /* column already exists */ }
 }
 
 const HORSE_PREFIXES = ['マカ', 'キタサン', 'ディープ', 'アーモンド', 'ゴールド', 'シンボリ', 'テイエム', 'メジロ', 'ナリタ', 'ダイワ', 'アグネス', 'グラス', 'エルコンドル', 'スペシャル', 'サイレンス', 'トウカイ', 'オグリ', 'タマモ', 'ミホノ', 'メジロ'];
@@ -869,8 +872,8 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
     // --- Admin: Reset Finance Balance ---
     if (path === '/finance/admin/reset-balance') {
-      const admin = await env.DB.prepare('SELECT role FROM users WHERE id = ?').bind(userId).first<{ role: string }>();
-      if (!admin || admin.role !== 'admin') return json({ error: '管理者権限が必要です' }, 403);
+      const admin = await env.DB.prepare('SELECT is_admin FROM users WHERE id = ?').bind(userId).first<{ is_admin: number }>();
+      if (!admin || !admin.is_admin) return json({ error: '管理者権限が必要です' }, 403);
       const { targetUserId, amount } = await request.json() as { targetUserId: string; amount?: number };
       if (!targetUserId) return json({ error: 'targetUserIdが必要です' }, 400);
       const newBal = Math.max(0, Math.floor(amount ?? 10000));
@@ -880,8 +883,8 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
     // --- Admin: Reset Shop Balance ---
     if (path === '/finance/admin/reset-shop-balance') {
-      const admin = await env.DB.prepare('SELECT role FROM users WHERE id = ?').bind(userId).first<{ role: string }>();
-      if (!admin || admin.role !== 'admin') return json({ error: '管理者権限が必要です' }, 403);
+      const admin = await env.DB.prepare('SELECT is_admin FROM users WHERE id = ?').bind(userId).first<{ is_admin: number }>();
+      if (!admin || !admin.is_admin) return json({ error: '管理者権限が必要です' }, 403);
       const { targetUserId, amount } = await request.json() as { targetUserId: string; amount?: number };
       if (!targetUserId) return json({ error: 'targetUserIdが必要です' }, 400);
       const newBal = Math.max(0, Math.floor(amount ?? 0));
@@ -1028,11 +1031,11 @@ export async function handleFinance(path: string, request: Request, env: Env, se
   } else if (request.method === 'GET') {
     // --- Admin: User List ---
     if (path === '/finance/admin/users') {
-      const admin = await env.DB.prepare('SELECT role FROM users WHERE id = ?').bind(userId).first<{ role: string }>();
-      if (!admin || admin.role !== 'admin') return json({ error: '管理者権限が必要です' }, 403);
+      const admin = await env.DB.prepare('SELECT is_admin FROM users WHERE id = ?').bind(userId).first<{ is_admin: number }>();
+      if (!admin || !admin.is_admin) return json({ error: '管理者権限が必要です' }, 403);
       const { results } = await env.DB.prepare(
-        'SELECT id, email, display_name, avatar_url, role, balance, finance_balance, created_at FROM users ORDER BY created_at DESC'
-      ).all<{ id: string; email: string; display_name: string; avatar_url: string; role: string; balance: number; finance_balance: string; created_at: string }>();
+        'SELECT id, email, display_name, avatar_url, role, is_admin, balance, finance_balance, created_at FROM users ORDER BY created_at DESC'
+      ).all<{ id: string; email: string; display_name: string; avatar_url: string; role: string; is_admin: number; balance: number; finance_balance: string; created_at: string }>();
       return json(results);
     }
 

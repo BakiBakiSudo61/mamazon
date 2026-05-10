@@ -181,10 +181,9 @@ export async function handleSeller(
       'INSERT INTO stores (id, owner_user_id, store_name, description) VALUES (?, ?, ?, ?)'
     ).bind(id, session.userId, body.store_name, body.description ?? null).run();
 
-    // Update user role (admin keeps admin role)
+    // Update user role (is_admin stays; role tracks buyer/seller/both)
     await env.DB.prepare(`
       UPDATE users SET role = CASE
-        WHEN role = 'admin' THEN 'admin'
         WHEN role = 'buyer' THEN 'seller'
         WHEN role = 'seller' THEN 'seller'
         ELSE 'both' END

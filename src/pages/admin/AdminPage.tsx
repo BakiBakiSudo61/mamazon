@@ -9,6 +9,7 @@ interface AdminUser {
   display_name: string;
   avatar_url: string;
   role: string;
+  is_admin: number;
   balance: number;
   finance_balance: string;
   created_at: string;
@@ -154,6 +155,7 @@ export function AdminPage() {
               </div>
               <div className={styles.cardRight}>
                 <span className={`${styles.role} ${styles[`role_${u.role}`]}`}>{u.role}</span>
+                {!!u.is_admin && <span className={`${styles.role} ${styles.role_admin}`}>admin</span>}
                 {expandedId === u.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </div>
             </div>

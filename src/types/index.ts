@@ -4,7 +4,8 @@ export interface User {
   display_name: string;
   avatar_url?: string;
   address_json?: string;
-  role: 'buyer' | 'seller' | 'both' | 'admin';
+  role: 'buyer' | 'seller' | 'both';
+  is_admin: number;
   balance: number;
   finance_balance: number;
   created_at: string;
