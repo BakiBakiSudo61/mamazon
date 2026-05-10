@@ -218,12 +218,17 @@ function getDailyLotteryNumbers(dateStr: string): number[] {
 type LotteryTicket = { id: string; userId: string; picks: number[]; amount: number; drawDate: string; claimed: boolean };
 
 async function getUserLotteryTickets(env: Env, userId: string, dateStr: string): Promise<LotteryTicket[]> {
-  const listRes = await env.SESSIONS.list({ prefix: `lottery:${dateStr}:${userId}:` });
+  // Use strongly-consistent get() via an index key instead of eventually-consistent list()
+  const idxKey = `lottery_idx:${dateStr}:${userId}`;
+  const idxRaw = await env.SESSIONS.get(idxKey);
+  if (!idxRaw) return [];
+  let ids: string[];
+  try { ids = JSON.parse(idxRaw) as string[]; } catch { return []; }
   const tickets: LotteryTicket[] = [];
-  for (const key of listRes.keys) {
-    const raw = await env.SESSIONS.get(key.name);
+  for (const id of ids) {
+    const raw = await env.SESSIONS.get(`lottery:${dateStr}:${userId}:${id}`);
     if (raw) {
-      try { tickets.push(JSON.parse(raw) as LotteryTicket); } catch (_) { /* skip */ }
+      try { tickets.push(JSON.parse(raw) as LotteryTicket); } catch { /* skip */ }
     }
   }
   return tickets;
@@ -768,15 +773,21 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       if (jstHour >= 12) jstDate.setDate(jstDate.getDate() + 1);
       const drawDate = jstDate.toISOString().slice(0, 10); // YYYY-MM-DD
 
-      // Store ticket in KV
+      // Store ticket in KV + update index (strongly consistent)
       const ticketId = crypto.randomUUID();
       const ticket = { id: ticketId, userId, picks: picks.sort((a, b) => a - b), amount, drawDate, claimed: false };
-      await env.SESSIONS.put(`lottery:${drawDate}:${userId}:${ticketId}`, JSON.stringify(ticket), { expirationTtl: 7 * 86400 });
+      const ticketKey = `lottery:${drawDate}:${userId}:${ticketId}`;
+      await env.SESSIONS.put(ticketKey, JSON.stringify(ticket), { expirationTtl: 7 * 86400 });
 
-      // Get user's ticket count for this draw
-      const listRes = await env.SESSIONS.list({ prefix: `lottery:${drawDate}:${userId}:` });
+      // Update index key (get → append → put) using get() which is strongly consistent
+      const idxKey = `lottery_idx:${drawDate}:${userId}`;
+      const idxRaw = await env.SESSIONS.get(idxKey);
+      let ids: string[] = [];
+      try { if (idxRaw) ids = JSON.parse(idxRaw) as string[]; } catch { /* reset */ }
+      ids.push(ticketId);
+      await env.SESSIONS.put(idxKey, JSON.stringify(ids), { expirationTtl: 7 * 86400 });
 
-      return json({ ticket, drawDate, ticketCount: listRes.keys.length, newBalance });
+      return json({ ticket, drawDate, ticketCount: ids.length, newBalance });
     }
 
     if (path === '/finance/gamble/lottery/status') {
