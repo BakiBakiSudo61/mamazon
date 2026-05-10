@@ -32,6 +32,7 @@ import { MarketPage } from './pages/MarketPage';
 import { Wishlist } from './pages/Wishlist';
 import { Favorites } from './pages/Favorites';
 import { Collection } from './pages/Collection';
+import { AdminPage } from './pages/admin/AdminPage';
 
 const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, initialized } = useAuthStore();
@@ -99,6 +100,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/seller/dashboard" element={<Layout><RequireSeller><Dashboard /></RequireSeller></Layout>} />
       <Route path="/seller/product/new" element={<Layout><RequireSeller><ProductForm mode="new" /></RequireSeller></Layout>} />
       <Route path="/seller/product/:id/edit" element={<Layout><RequireSeller><ProductForm mode="edit" /></RequireSeller></Layout>} />
+      <Route path="/admin" element={<Layout><RequireAuth><AdminPage /></RequireAuth></Layout>} />
       <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
   );

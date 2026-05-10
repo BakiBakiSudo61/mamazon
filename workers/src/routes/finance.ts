@@ -906,7 +906,7 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       return json({ minedAmount, newBalance, cooldownSeconds: CD_SEC });
     }
 
-    // --- Admin: Reset Balance ---
+    // --- Admin: Reset Finance Balance ---
     if (path === '/finance/admin/reset-balance') {
       const admin = await env.DB.prepare('SELECT role FROM users WHERE id = ?').bind(userId).first<{ role: string }>();
       if (!admin || admin.role !== 'admin') return json({ error: '管理者権限が必要です' }, 403);
@@ -914,6 +914,17 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       if (!targetUserId) return json({ error: 'targetUserIdが必要です' }, 400);
       const newBal = Math.max(0, Math.floor(amount ?? 10000));
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBal.toString(), targetUserId).run();
+      return json({ success: true, targetUserId, newBalance: newBal });
+    }
+
+    // --- Admin: Reset Shop Balance ---
+    if (path === '/finance/admin/reset-shop-balance') {
+      const admin = await env.DB.prepare('SELECT role FROM users WHERE id = ?').bind(userId).first<{ role: string }>();
+      if (!admin || admin.role !== 'admin') return json({ error: '管理者権限が必要です' }, 403);
+      const { targetUserId, amount } = await request.json() as { targetUserId: string; amount?: number };
+      if (!targetUserId) return json({ error: 'targetUserIdが必要です' }, 400);
+      const newBal = Math.max(0, Math.floor(amount ?? 0));
+      await env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?').bind(newBal, targetUserId).run();
       return json({ success: true, targetUserId, newBalance: newBal });
     }
 
@@ -1054,6 +1065,16 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       return json({ success: true, newBalance: newShoppingBalance, newFinanceBalance });
     }
   } else if (request.method === 'GET') {
+    // --- Admin: User List ---
+    if (path === '/finance/admin/users') {
+      const admin = await env.DB.prepare('SELECT role FROM users WHERE id = ?').bind(userId).first<{ role: string }>();
+      if (!admin || admin.role !== 'admin') return json({ error: '管理者権限が必要です' }, 403);
+      const { results } = await env.DB.prepare(
+        'SELECT id, email, display_name, avatar_url, role, balance, finance_balance, created_at FROM users ORDER BY created_at DESC'
+      ).all<{ id: string; email: string; display_name: string; avatar_url: string; role: string; balance: number; finance_balance: string; created_at: string }>();
+      return json(results);
+    }
+
     // --- Casino: Horse Racing Info ---
     if (path === '/finance/gamble/horseracing/info') {
       const schedule = getCurrentRaceSchedule();
