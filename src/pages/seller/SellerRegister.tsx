@@ -17,7 +17,7 @@ export const SellerRegister: React.FC = () => {
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  if (user?.role === 'seller' || user?.role === 'both' || user?.role === 'admin') {
+  if (user?.role === 'seller' || user?.role === 'both') {
     return (
       <div className={styles.page}>
         <div className={styles.card}>
