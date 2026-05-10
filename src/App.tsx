@@ -46,7 +46,7 @@ const RequireSeller: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const { user, initialized } = useAuthStore();
   if (!initialized) return <div className="page-loading">読み込み中...</div>;
   if (!user) return <Navigate to="/" replace />;
-  if (user.role !== 'seller' && user.role !== 'both') return <Navigate to="/seller/register" replace />;
+  if (user.role !== 'seller' && user.role !== 'both' && user.role !== 'admin') return <Navigate to="/seller/register" replace />;
   return <>{children}</>;
 };
 
