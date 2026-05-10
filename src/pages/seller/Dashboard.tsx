@@ -47,7 +47,10 @@ export const Dashboard: React.FC = () => {
         setDescription(d.store.description ?? '');
         setSales(s.sales);
       })
-      .catch(() => {})
+      .catch(() => {
+        // store not found → redirect to register
+        window.location.href = '/seller/register';
+      })
       .finally(() => setLoading(false));
   };
 
