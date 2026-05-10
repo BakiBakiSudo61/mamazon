@@ -11,6 +11,12 @@ function getLabel(n: number) { return CARD_LABELS[n] ?? String(n); }
 function getSuit(n: number) { return SUITS[(n - 1) % 4]; }
 function isRed(suit: string) { return suit === '♥' || suit === '♦'; }
 
+function calcOdds(card: number, dir: 'high' | 'low'): number {
+  const p = dir === 'high' ? (13 - card) / 13 : (card - 1) / 13;
+  if (p <= 0) return 0;
+  return Math.round(Math.max(1.05, 0.90 / p) * 100) / 100;
+}
+
 const BET_PRESETS = [100, 500, 1000, 5000];
 
 export function HighLow() {
@@ -52,6 +58,8 @@ export function HighLow() {
 
   const suit = currentSuit;
   const red = isRed(suit);
+  const highOdds = calcOdds(currentCard, 'high');
+  const lowOdds  = calcOdds(currentCard, 'low');
 
   return (
     <div className={styles.game}>
@@ -76,7 +84,7 @@ export function HighLow() {
       {/* Result banner */}
       {result && (
         <div className={`${styles.result} ${styles[result]}`}>
-          {result === 'win' && `🏆 WIN！ +¥${payout.toLocaleString()}`}
+          {result === 'win' && `🏆 WIN！ +¥${(payout - betAmount).toLocaleString()} (返却合計 ¥${payout.toLocaleString()})`}
           {result === 'draw' && '🤝 DRAW — 賭け金返還'}
           {result === 'lose' && `💸 LOSE — ¥${betAmount.toLocaleString()} 没収`}
         </div>
@@ -97,18 +105,19 @@ export function HighLow() {
           type="number"
           min="1"
           value={betAmount}
-          onChange={e => setBetAmount(Number(e.target.value))}
+          onChange={e => setBetAmount(Math.max(1, parseInt(e.target.value) || 1))}
+          onFocus={e => e.target.select()}
           className={styles.betInput}
         />
       </div>
 
       {/* Action buttons */}
       <div className={styles.actions}>
-        <button className={`${styles.btn} ${styles.high}`} onClick={() => play('high')} disabled={loading}>
-          {loading ? <Loader size={18} className={styles.spin} /> : '▲ HIGH'}
+        <button className={`${styles.btn} ${styles.high}`} onClick={() => play('high')} disabled={loading || highOdds === 0}>
+          {loading ? <Loader size={18} className={styles.spin} /> : <>▲ HIGH<br /><span style={{ fontSize: '0.75em', opacity: 0.85 }}>{highOdds > 0 ? `×${highOdds.toFixed(2)}` : '—'}</span></>}
         </button>
-        <button className={`${styles.btn} ${styles.low}`} onClick={() => play('low')} disabled={loading}>
-          {loading ? <Loader size={18} className={styles.spin} /> : '▼ LOW'}
+        <button className={`${styles.btn} ${styles.low}`} onClick={() => play('low')} disabled={loading || lowOdds === 0}>
+          {loading ? <Loader size={18} className={styles.spin} /> : <>▼ LOW<br /><span style={{ fontSize: '0.75em', opacity: 0.85 }}>{lowOdds > 0 ? `×${lowOdds.toFixed(2)}` : '—'}</span></>}
         </button>
       </div>
 

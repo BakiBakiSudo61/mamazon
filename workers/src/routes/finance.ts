@@ -298,6 +298,7 @@ export async function handleFinance(path: string, request: Request, env: Env, se
     if (path === '/finance/gamble/highlow') {
       const { amount, guess, currentCard } = await request.json() as { amount: number, guess: 'high' | 'low', currentCard: number };
       if (amount <= 0) return json({ error: '無効な金額です' }, 400);
+      if (currentCard < 1 || currentCard > 13) return json({ error: '無効なカードです' }, 400);
 
       const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
       const finBal = parseInt(user?.finance_balance || '0');
@@ -307,7 +308,14 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
       // Draw a new card (1-13)
       const newCard = Math.floor(Math.random() * 13) + 1;
-      
+
+      // Dynamic odds based on win probability with 10% house edge
+      const highWinProb = (13 - currentCard) / 13;
+      const lowWinProb  = (currentCard - 1) / 13;
+      const HOUSE_EDGE = 0.10;
+      const calcOdds = (p: number) => p > 0 ? Math.max(1.05, (1 - HOUSE_EDGE) / p) : 2.0;
+      const odds = guess === 'high' ? calcOdds(highWinProb) : calcOdds(lowWinProb);
+
       let win = false;
       let draw = false;
       if (newCard === currentCard) {
@@ -321,17 +329,17 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       let newBalance = finBal;
       let payout = 0;
       if (win) {
-        payout = amount * 2;
-        newBalance += amount;
+        payout = Math.floor(amount * odds);
+        newBalance = finBal - amount + payout;
       } else if (draw) {
-        payout = amount;
+        payout = amount; // return stake
       } else {
-        newBalance -= amount;
+        newBalance = finBal - amount;
       }
 
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
-      return json({ newCard, result: win ? 'win' : draw ? 'draw' : 'lose', payout, newBalance });
+      return json({ newCard, result: win ? 'win' : draw ? 'draw' : 'lose', payout, newBalance, odds: parseFloat(odds.toFixed(2)) });
     }
 
     // --- Casino: Slots ---
