@@ -128,6 +128,12 @@ async function ensureSchema(env: Env) {
   try {
     await env.DB.prepare(`ALTER TABLE horse_bets ADD COLUMN horse_index_3 INTEGER`).run();
   } catch (_) { /* column already exists */ }
+  try {
+    await env.DB.prepare(`ALTER TABLE horse_bets ADD COLUMN horse_index_2 INTEGER`).run();
+  } catch (_) { /* column already exists */ }
+  try {
+    await env.DB.prepare(`ALTER TABLE horse_bets ADD COLUMN bet_type TEXT DEFAULT 'win'`).run();
+  } catch (_) { /* column already exists */ }
 }
 
 const HORSE_PREFIXES = ['マカ', 'キタサン', 'ディープ', 'アーモンド', 'ゴールド', 'シンボリ', 'テイエム', 'メジロ', 'ナリタ', 'ダイワ', 'アグネス', 'グラス', 'エルコンドル', 'スペシャル', 'サイレンス', 'トウカイ', 'オグリ', 'タマモ', 'ミホノ', 'メジロ'];
