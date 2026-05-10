@@ -370,6 +370,58 @@
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes dealCard { from { transform: translateY(-30px) rotate(-10deg); opacity: 0; } to { transform: translateY(0) rotate(0); opacity: 1; } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.75); } to { opacity: 1; transform: scale(1); } }
+
+/* Win modal */
+.winModalBg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+.winModal {
+  background: linear-gradient(135deg, #1a0a3a, #2d1060);
+  border: 2px solid rgba(255, 215, 0, 0.5);
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  max-width: 380px;
+  width: 90%;
+  animation: scaleIn 0.35s ease-out;
+  box-shadow: 0 0 60px rgba(255, 215, 0, 0.3);
+}
+.winModalEmoji { font-size: 4rem; margin-bottom: 0.5rem; }
+.winModalTitle { font-size: 1.8rem; font-weight: 900; color: #FFD700; margin: 0 0 0.75rem; }
+.winModalAmt { font-size: 2.2rem; font-weight: 900; color: #fff; margin: 0 0 0.4rem; }
+.winModalSub { color: rgba(255,255,255,0.6); font-size: 0.9rem; margin: 0 0 1.5rem; }
+
+/* Ticket card */
+.ticketCard {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
+}
+.ticketLabel {
+  color: rgba(255,255,255,0.4);
+  font-size: 0.75rem;
+  font-weight: 700;
+  min-width: 24px;
+}
+.ticketAmt {
+  color: rgba(255,255,255,0.5);
+  font-size: 0.75rem;
+  margin-left: auto;
+}
 
 /* Responsive */
 @media (max-width: 600px) {

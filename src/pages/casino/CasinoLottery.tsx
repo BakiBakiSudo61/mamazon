@@ -17,6 +17,7 @@ type LotteryStatus = {
 
 const MULTIPLIERS: Record<number, number> = { 6: 1000000, 5: 1000, 4: 100, 3: 10, 2: 2 };
 const PRIZE_LABELS: Record<number, string> = { 6: '🏆 1等', 5: '🥈 2等', 4: '🥉 3等', 3: '4等', 2: '5等' };
+const COUNT_OPTIONS = [1, 2, 3, 5, 10];
 
 function formatCountdown(targetISO: string): string {
   const diff = new Date(targetISO).getTime() - Date.now();
@@ -27,18 +28,30 @@ function formatCountdown(targetISO: string): string {
   return `${h}時間${String(m).padStart(2, '0')}分${String(s).padStart(2, '0')}秒後`;
 }
 
+function generateRandomPicks(): number[] {
+  const pool = Array.from({ length: 45 }, (_, i) => i + 1);
+  const selected: number[] = [];
+  for (let i = 0; i < 6; i++) {
+    const idx = Math.floor(Math.random() * pool.length);
+    selected.push(pool.splice(idx, 1)[0]);
+  }
+  return selected.sort((a, b) => a - b);
+}
+
 export function CasinoLottery() {
   const refreshBalance = useAuthStore((s) => s.fetchMe);
   const [amount, setAmount] = useState(1000);
   const [picks, setPicks] = useState<number[]>([]);
+  const [ticketCount, setTicketCount] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [buyProgress, setBuyProgress] = useState(0);
   const [status, setStatus] = useState<LotteryStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [revealedCount, setRevealedCount] = useState(0);
   const [isRevealing, setIsRevealing] = useState(false);
   const [countdown, setCountdown] = useState('');
   const [claimLoading, setClaimLoading] = useState(false);
-  const [claimResult, setClaimResult] = useState<{ totalPayout: number; claimed: number } | null>(null);
+  const [winModal, setWinModal] = useState<{ totalPayout: number; claimed: number } | null>(null);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -50,7 +63,6 @@ export function CasinoLottery() {
 
   useEffect(() => { loadStatus(); }, [loadStatus]);
 
-  // Countdown timer
   useEffect(() => {
     if (!status?.nextDraw) return;
     const timer = setInterval(() => setCountdown(formatCountdown(status.nextDraw)), 1000);
@@ -63,26 +75,24 @@ export function CasinoLottery() {
     else if (picks.length < 6) setPicks([...picks, n]);
   };
 
-  const quickPick = () => {
-    const pool = Array.from({ length: 45 }, (_, i) => i + 1);
-    const selected: number[] = [];
-    for (let i = 0; i < 6; i++) {
-      const idx = Math.floor(Math.random() * pool.length);
-      selected.push(pool.splice(idx, 1)[0]);
-    }
-    setPicks(selected.sort((a, b) => a - b));
-  };
+  const quickPick = () => setPicks(generateRandomPicks());
 
-  const buyTicket = async () => {
+  const buyTickets = async () => {
     if (picks.length !== 6) return;
     setLoading(true);
+    setBuyProgress(0);
     try {
-      await api.post('/finance/gamble/lottery', { amount, picks });
+      for (let i = 0; i < ticketCount; i++) {
+        const ticketPicks = i === 0 ? picks : generateRandomPicks();
+        await api.post('/finance/gamble/lottery', { amount, picks: ticketPicks });
+        setBuyProgress(i + 1);
+      }
       setPicks([]);
       await loadStatus();
       refreshBalance();
     } catch { /* ignore */ }
     setLoading(false);
+    setBuyProgress(0);
   };
 
   const revealResults = async () => {
@@ -100,7 +110,7 @@ export function CasinoLottery() {
     setClaimLoading(true);
     try {
       const res = await api.post<{ totalPayout: number; claimed: number }>('/finance/gamble/lottery/claim', {});
-      setClaimResult(res);
+      if (res.totalPayout > 0) setWinModal(res);
       await loadStatus();
       refreshBalance();
     } catch { /* ignore */ }
@@ -114,7 +124,38 @@ export function CasinoLottery() {
   return (
     <div className={styles.gamePage}>
       <h2 className={styles.gameTitle}>🎫 宝くじ（ロト6）</h2>
-      <p className={styles.gameSubtitle}>毎日21:00に抽選 — 1〜45から6つの番号を選んで購入</p>
+      <p className={styles.gameSubtitle}>毎日12:00に抽選 — 1〜45から6つの番号を選んで購入</p>
+
+      {/* ===== 当選モーダル ===== */}
+      {winModal && (
+        <div className={styles.winModalBg} onClick={() => setWinModal(null)}>
+          <div className={styles.winModal} onClick={e => e.stopPropagation()}>
+            <div className={styles.winModalEmoji}>🎉</div>
+            <h2 className={styles.winModalTitle}>当選おめでとう！</h2>
+            <p className={styles.winModalAmt}>{winModal.totalPayout.toLocaleString()} pt 獲得！</p>
+            <p className={styles.winModalSub}>{winModal.claimed}枚のチケットが当選しました</p>
+            <button className={styles.spinBtn} onClick={() => setWinModal(null)}>閉じる</button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== 購入済みチケット ===== */}
+      {!statusLoading && status && status.todayTickets.length > 0 && (
+        <div className={styles.lotteryReveal}>
+          <h3>📋 {status.drawn ? '次回（明日）' : '本日'}の購入チケット ({status.todayTickets.length}枚)</h3>
+          {status.todayTickets.map((t, ti) => (
+            <div key={t.id} className={styles.ticketCard}>
+              <span className={styles.ticketLabel}>#{ti + 1}</span>
+              <div className={styles.lotteryBalls}>
+                {t.picks.map((n, i) => (
+                  <div key={i} className={`${styles.lotteryBall} ${styles.pickBall}`}>{n}</div>
+                ))}
+              </div>
+              <span className={styles.ticketAmt}>{t.amount.toLocaleString()}pt</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ===== 結果表示エリア ===== */}
       {!statusLoading && status && (
@@ -139,19 +180,17 @@ export function CasinoLottery() {
                   🎬 番号を1つずつ公開
                 </button>
               )}
-              {isRevealing && (
-                <p style={{ color: 'var(--accent)', marginTop: '0.5rem' }}>発表中…</p>
-              )}
+              {isRevealing && <p style={{ color: 'var(--accent)', marginTop: '0.5rem' }}>発表中…</p>}
 
-              {/* 自分のチケット結果 */}
               {status.resultTickets.length > 0 && revealedCount === 6 && (
                 <div style={{ marginTop: '1.25rem', width: '100%' }}>
-                  <h4 style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>あなたのチケット結果</h4>
-                  {status.resultTickets.map((t) => {
+                  <h4 style={{ marginBottom: '0.5rem', color: 'var(--text)' }}>あなたの結果</h4>
+                  {status.resultTickets.map((t, ti) => {
                     const m = t.matches ?? 0;
                     const won = m >= 2;
                     return (
                       <div key={t.id} className={`${styles.resultBanner} ${won ? styles.resultWin : styles.resultLose}`} style={{ marginBottom: '0.5rem' }}>
+                        <div style={{ marginBottom: '0.25rem', fontSize: '0.8rem', opacity: 0.7 }}>チケット#{ti + 1}</div>
                         <div className={styles.lotteryBalls} style={{ justifyContent: 'center', marginBottom: '0.25rem' }}>
                           {t.picks.map((n, i) => (
                             <div key={i} className={`${styles.lotteryBall} ${styles.pickBall} ${status.winning!.includes(n) ? styles.ballMatch : ''}`}>
@@ -166,15 +205,10 @@ export function CasinoLottery() {
                       </div>
                     );
                   })}
-                  {hasUnclaimedWins && !claimResult && (
+                  {hasUnclaimedWins && !winModal && (
                     <button className={styles.spinBtn} onClick={claimAll} disabled={claimLoading} style={{ marginTop: '0.5rem' }}>
                       {claimLoading ? '処理中...' : '🎁 当選金を受け取る'}
                     </button>
-                  )}
-                  {claimResult && (
-                    <div className={styles.resultBanner + ' ' + styles.resultWin}>
-                      🎉 {claimResult.totalPayout.toLocaleString()}pt 受け取りました！
-                    </div>
                   )}
                 </div>
               )}
@@ -183,26 +217,9 @@ export function CasinoLottery() {
             <div style={{ textAlign: 'center', padding: '1rem' }}>
               <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>次回抽選まで</p>
               <p style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>{countdown}</p>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>毎日 21:00 (JST) に発表</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>毎日 12:00 (JST) に発表</p>
             </div>
           )}
-        </div>
-      )}
-
-      {/* ===== 購入済みチケット ===== */}
-      {status && status.todayTickets.length > 0 && (
-        <div className={styles.lotteryReveal} style={{ marginTop: '0.75rem' }}>
-          <h3>📋 本日購入済み ({status.todayTickets.length}枚)</h3>
-          {status.todayTickets.map((t) => (
-            <div key={t.id} className={styles.lotteryBalls} style={{ marginTop: '0.4rem' }}>
-              {t.picks.map((n, i) => (
-                <div key={i} className={`${styles.lotteryBall} ${styles.pickBall}`}>{n}</div>
-              ))}
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', alignSelf: 'center', marginLeft: '0.25rem' }}>
-                {t.amount.toLocaleString()}pt
-              </span>
-            </div>
-          ))}
         </div>
       )}
 
@@ -235,8 +252,27 @@ export function CasinoLottery() {
             ))}
           </div>
         </div>
-        <button className={styles.spinBtn} onClick={buyTicket} disabled={loading || picks.length !== 6}>
-          {loading ? '購入中...' : `🎫 チケットを購入 (${amount.toLocaleString()}pt)`}
+        <div className={styles.betRow}>
+          <label>枚数</label>
+          <div className={styles.amountBtns}>
+            {COUNT_OPTIONS.map((v) => (
+              <button key={v} className={`${styles.amountBtn} ${ticketCount === v ? styles.amountActive : ''}`} onClick={() => setTicketCount(v)}>
+                {v}枚
+              </button>
+            ))}
+          </div>
+        </div>
+        {ticketCount > 1 && (
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+            ※ 1枚目は選択番号、2枚目以降はランダム生成
+          </p>
+        )}
+        <button className={styles.spinBtn} onClick={buyTickets} disabled={loading || picks.length !== 6}>
+          {loading
+            ? `購入中… (${buyProgress}/${ticketCount})`
+            : ticketCount === 1
+              ? `🎫 チケットを購入 (${amount.toLocaleString()}pt)`
+              : `🎫 ${ticketCount}枚購入 (計${(amount * ticketCount).toLocaleString()}pt)`}
         </button>
       </div>
 

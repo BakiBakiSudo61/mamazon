@@ -21,7 +21,8 @@ const BET_PRESETS = [100, 500, 1000, 5000];
 
 export function HighLow() {
   const { user, fetchMe } = useAuthStore();
-  const [betAmount, setBetAmount] = useState(100);
+  const [inputVal, setInputVal] = useState('100');
+  const betAmount = Math.max(1, parseInt(inputVal) || 0);
   const [currentCard, setCurrentCard] = useState(7);
   const [currentSuit, setCurrentSuit] = useState('♠');
   const [result, setResult] = useState<'win' | 'draw' | 'lose' | null>(null);
@@ -96,17 +97,18 @@ export function HighLow() {
           <button
             key={v}
             className={`${styles.chip} ${betAmount === v ? styles.chipActive : ''}`}
-            onClick={() => setBetAmount(v)}
+            onClick={() => setInputVal(String(v))}
           >
             ¥{v.toLocaleString()}
           </button>
         ))}
         <input
-          type="number"
-          min="1"
-          value={betAmount}
-          onChange={e => setBetAmount(Math.max(1, parseInt(e.target.value) || 1))}
+          type="text"
+          inputMode="numeric"
+          value={inputVal}
+          onChange={e => setInputVal(e.target.value.replace(/[^0-9]/g, ''))}
           onFocus={e => e.target.select()}
+          onBlur={() => setInputVal(String(Math.max(1, parseInt(inputVal) || 1)))}
           className={styles.betInput}
         />
       </div>

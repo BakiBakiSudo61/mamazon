@@ -138,7 +138,7 @@ export function Market() {
     init();
   }, []);
 
-  // Price polling every 15 seconds
+  // Price polling every 5 seconds
   useEffect(() => {
     const fetchPrices = async () => {
       try {
@@ -162,7 +162,7 @@ export function Market() {
       }
     };
     fetchPrices();
-    const interval = setInterval(fetchPrices, 15000); // every 15 seconds
+    const interval = setInterval(fetchPrices, 5000); // every 5 seconds
     return () => clearInterval(interval);
   }, []);
 

@@ -683,9 +683,9 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       // Get today's draw date (JST)
       const now = new Date();
       const jstHour = (now.getUTCHours() + 9) % 24;
-      // If past 21:00 JST, tickets go to tomorrow's draw
+      // If past 12:00 JST, tickets go to tomorrow's draw
       const jstDate = new Date(now.getTime() + 9 * 3600000);
-      if (jstHour >= 21) jstDate.setDate(jstDate.getDate() + 1);
+      if (jstHour >= 12) jstDate.setDate(jstDate.getDate() + 1);
       const drawDate = jstDate.toISOString().slice(0, 10); // YYYY-MM-DD
 
       // Store ticket in KV
@@ -704,15 +704,16 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       const now = new Date();
       const jstNow = new Date(now.getTime() + 9 * 3600000);
       const jstHour = jstNow.getUTCHours();
-      const jstMin = jstNow.getUTCMinutes();
       const todayDate = jstNow.toISOString().slice(0, 10);
 
-      // Check if draw has happened (21:00 JST)
-      const drawn = jstHour >= 21 || (jstHour === 21 && jstMin >= 0);
+      // Check if draw has happened (12:00 JST = 3:00 UTC)
+      const drawn = jstHour >= 12;
 
-      // Yesterday's draw (if before 21:00, show yesterday's results)
+      // Yesterday's draw (if before 12:00, show yesterday's results)
       const yesterdayDate = new Date(jstNow.getTime() - 86400000).toISOString().slice(0, 10);
-      const activeDrawDate = drawn ? todayDate : todayDate;
+      const tomorrowDate = new Date(jstNow.getTime() + 86400000).toISOString().slice(0, 10);
+      // activeDrawDate: the draw that newly purchased tickets belong to
+      const activeDrawDate = drawn ? tomorrowDate : todayDate;
       const resultsDrawDate = drawn ? todayDate : yesterdayDate;
 
       // Get winning numbers (deterministic from date)
@@ -727,8 +728,8 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       if (drawn) {
         nextDraw.setDate(nextDraw.getDate() + 1);
       }
-      nextDraw.setUTCHours(12, 0, 0, 0); // 21:00 JST = 12:00 UTC
-      const nextDrawISO = new Date(nextDraw.getTime() - 9 * 3600000).toISOString();
+      nextDraw.setUTCHours(3, 0, 0, 0); // 12:00 JST = 03:00 UTC
+      const nextDrawISO = nextDraw.toISOString();
 
       return json({
         drawn,
@@ -757,8 +758,8 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
       for (let d = 0; d < 7; d++) {
         const checkDate = new Date(jstNow.getTime() - d * 86400000);
-        // Skip today if before 21:00
-        if (d === 0 && jstHour < 21) continue;
+        // Skip today if before 12:00 JST
+        if (d === 0 && jstHour < 12) continue;
         const dateStr = checkDate.toISOString().slice(0, 10);
         const winning = getDailyLotteryNumbers(dateStr);
         const tickets = await getUserLotteryTickets(env, userId, dateStr);
