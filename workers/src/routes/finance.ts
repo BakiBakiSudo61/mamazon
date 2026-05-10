@@ -229,6 +229,50 @@ async function getUserLotteryTickets(env: Env, userId: string, dateStr: string):
   return tickets;
 }
 
+// ─── 累進課税 ─────────────────────────────────────────────────────────────────
+const TAX_BRACKETS = [
+  { limit: 1_000_000,       rate: 0.00 },
+  { limit: 10_000_000,      rate: 0.10 },
+  { limit: 100_000_000,     rate: 0.20 },
+  { limit: 10_000_000_000,  rate: 0.35 },
+  { limit: Infinity,        rate: 0.50 },
+];
+
+function applyProgressiveTax(profit: number): { afterTax: number; taxAmount: number } {
+  if (profit <= 0) return { afterTax: profit, taxAmount: 0 };
+  let tax = 0;
+  let prev = 0;
+  for (const bracket of TAX_BRACKETS) {
+    const taxable = Math.min(profit - prev, bracket.limit - prev);
+    if (taxable <= 0) break;
+    tax += Math.floor(taxable * bracket.rate);
+    prev = Math.min(profit, bracket.limit);
+    if (prev >= profit) break;
+  }
+  return { afterTax: profit - tax, taxAmount: tax };
+}
+
+// ─── インフレ率（日次 -0.1%/日）────────────────────────────────────────────────
+async function applyDailyInflation(env: Env, userId: string, balance: number): Promise<number> {
+  const key = `inflation:${userId}`;
+  const lastStr = await env.SESSIONS.get(key);
+  const now = Date.now();
+  if (lastStr) {
+    const fullDays = Math.floor((now - parseInt(lastStr)) / 86400000);
+    if (fullDays >= 1) {
+      const deduction = Math.floor(balance * (1 - Math.pow(0.999, fullDays)));
+      if (deduction > 0) {
+        balance = Math.max(0, balance - deduction);
+        await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(balance.toString(), userId).run();
+      }
+      await env.SESSIONS.put(key, now.toString(), { expirationTtl: 30 * 86400 });
+    }
+  } else {
+    await env.SESSIONS.put(key, now.toString(), { expirationTtl: 30 * 86400 });
+  }
+  return balance;
+}
+
 function getCurrentRaceSchedule() {
   const now = new Date();
   // JST conversion
@@ -298,6 +342,7 @@ export async function handleFinance(path: string, request: Request, env: Env, se
     if (path === '/finance/gamble/highlow') {
       const { amount, guess, currentCard } = await request.json() as { amount: number, guess: 'high' | 'low', currentCard: number };
       if (amount <= 0) return json({ error: '無効な金額です' }, 400);
+      if (amount > 1_000_000) return json({ error: 'ベット上限は100万ptです' }, 400);
       if (currentCard < 1 || currentCard > 13) return json({ error: '無効なカードです' }, 400);
 
       const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
@@ -328,8 +373,12 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
       let newBalance = finBal;
       let payout = 0;
+      let taxAmount = 0;
       if (win) {
-        payout = Math.floor(amount * odds);
+        const rawPayout = Math.floor(amount * odds);
+        const taxed = applyProgressiveTax(rawPayout - amount);
+        taxAmount = taxed.taxAmount;
+        payout = amount + taxed.afterTax;
         newBalance = finBal - amount + payout;
       } else if (draw) {
         payout = amount; // return stake
@@ -339,13 +388,14 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
-      return json({ newCard, result: win ? 'win' : draw ? 'draw' : 'lose', payout, newBalance, odds: parseFloat(odds.toFixed(2)) });
+      return json({ newCard, result: win ? 'win' : draw ? 'draw' : 'lose', payout, newBalance, odds: parseFloat(odds.toFixed(2)), taxAmount });
     }
 
     // --- Casino: Slots ---
     if (path === '/finance/gamble/slots') {
       const { amount } = await request.json() as { amount: number };
       if (amount <= 0) return json({ error: '無効な金額です' }, 400);
+      if (amount > 1_000_000) return json({ error: 'ベット上限は100万ptです' }, 400);
 
       const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
       const finBal = parseInt(user?.finance_balance || '0');
@@ -367,10 +417,18 @@ export async function handleFinance(path: string, request: Request, env: Env, se
         multiplier = 2;
       }
 
-      const newBalance = finBal - amount + (amount * multiplier);
+      const rawPayout = amount * multiplier;
+      let actualPayout = rawPayout;
+      let taxAmount = 0;
+      if (multiplier > 0) {
+        const taxed = applyProgressiveTax(rawPayout - amount);
+        taxAmount = taxed.taxAmount;
+        actualPayout = amount + taxed.afterTax;
+      }
+      const newBalance = finBal - amount + actualPayout;
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
-      return json({ reels: [reel1, reel2, reel3], multiplier, payout: amount * multiplier, newBalance });
+      return json({ reels: [reel1, reel2, reel3], multiplier, payout: actualPayout, newBalance, taxAmount });
     }
 
     // --- Casino: Horse Racing Bet ---
@@ -378,6 +436,7 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       const { amount, horseIndex, horseIndex2, horseIndex3, betType, raceId } = await request.json() as { amount: number, horseIndex: number, horseIndex2?: number, horseIndex3?: number, betType?: string, raceId: string };
       const type = betType || 'win';
       if (amount <= 0 || horseIndex < 0 || horseIndex > 17 || !raceId) return json({ error: '無効なリクエストです' }, 400);
+      if (amount > 1_000_000) return json({ error: 'ベット上限は100万ptです' }, 400);
       if (type === 'quinella' && (horseIndex2 === undefined || horseIndex2 < 0 || horseIndex2 > 17 || horseIndex === horseIndex2)) {
         return json({ error: '馬連の指定が無効です' }, 400);
       }
@@ -543,6 +602,7 @@ export async function handleFinance(path: string, request: Request, env: Env, se
         betValue: number | string;
       };
       if (amount <= 0) return json({ error: '無効な金額です' }, 400);
+      if (amount > 1_000_000) return json({ error: 'ベット上限は100万ptです' }, 400);
 
       const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
       const finBal = parseInt(user?.finance_balance || '0');
@@ -572,11 +632,17 @@ export async function handleFinance(path: string, request: Request, env: Env, se
         if ((betValue === 'low' && result <= 18) || (betValue === 'high' && result >= 19)) { win = true; multiplier = 2; }
       }
 
-      const payout = win ? amount * multiplier : 0;
-      const newBalance = finBal - amount + payout;
+      let actualPayout = win ? amount * multiplier : 0;
+      let taxAmount = 0;
+      if (win) {
+        const taxed = applyProgressiveTax(actualPayout - amount);
+        taxAmount = taxed.taxAmount;
+        actualPayout = amount + taxed.afterTax;
+      }
+      const newBalance = finBal - amount + actualPayout;
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
-      return json({ result, resultColor, win, multiplier, payout, newBalance });
+      return json({ result, resultColor, win, multiplier, payout: actualPayout, newBalance, taxAmount });
     }
 
     // --- Casino: Blackjack ---
@@ -602,6 +668,7 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
       if (action === 'start') {
         if (amount <= 0) return json({ error: '無効な金額です' }, 400);
+        if (amount > 1_000_000) return json({ error: 'ベット上限は100万ptです' }, 400);
         if (!user || finBal < amount) return json({ error: 'ファイナンス残高が不足しています' }, 400);
 
         const playerHand = [drawCard(), drawCard()];
@@ -611,11 +678,17 @@ export async function handleFinance(path: string, request: Request, env: Env, se
         // Natural blackjack check
         if (playerTotal === 21) {
           const dealerTotal = handTotal(dealerHand);
-          const payout = dealerTotal === 21 ? amount : Math.floor(amount * 2.5);
+          let payout = dealerTotal === 21 ? amount : Math.floor(amount * 2.5);
           const result = dealerTotal === 21 ? 'push' : 'blackjack';
+          let bjTax = 0;
+          if (result === 'blackjack') {
+            const taxed = applyProgressiveTax(payout - amount);
+            bjTax = taxed.taxAmount;
+            payout = amount + taxed.afterTax;
+          }
           const newBalance = finBal - amount + payout;
           await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
-          return json({ hand: playerHand, dealerHand, playerTotal, dealerTotal, result, payout, newBalance, done: true });
+          return json({ hand: playerHand, dealerHand, playerTotal, dealerTotal, result, payout, newBalance, done: true, taxAmount: bjTax });
         }
 
         return json({ hand: playerHand, dealerHand: [dealerHand[0], 0], dealerFull: dealerHand, playerTotal, done: false });
@@ -655,10 +728,16 @@ export async function handleFinance(path: string, request: Request, env: Env, se
         else if (playerTotal === dealerTotal) { result = 'push'; payout = amount; }
         else { result = 'lose'; payout = 0; }
 
+        let taxAmount = 0;
+        if (result === 'win') {
+          const taxed = applyProgressiveTax(payout - amount);
+          taxAmount = taxed.taxAmount;
+          payout = amount + taxed.afterTax;
+        }
         const newBalance = finBal - amount + payout;
         await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
-        return json({ hand: clientHand, dealerHand, playerTotal, dealerTotal, result, payout, newBalance, done: true });
+        return json({ hand: clientHand, dealerHand, playerTotal, dealerTotal, result, payout, newBalance, done: true, taxAmount });
       }
 
       return json({ error: '不正なアクションです' }, 400);
@@ -668,6 +747,7 @@ export async function handleFinance(path: string, request: Request, env: Env, se
     if (path === '/finance/gamble/lottery') {
       const { amount, picks } = await request.json() as { amount: number; picks: number[] };
       if (amount <= 0) return json({ error: '無効な金額です' }, 400);
+      if (amount > 1_000_000) return json({ error: 'ベット上限は100万ptです' }, 400);
       if (!picks || picks.length !== 6) return json({ error: '6つの番号を選んでください' }, 400);
       if (picks.some(n => n < 1 || n > 45 || !Number.isInteger(n))) return json({ error: '1〜45の整数を選んでください' }, 400);
       if (new Set(picks).size !== 6) return json({ error: '重複しない番号を選んでください' }, 400);
@@ -791,49 +871,86 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
     // --- Mine Crypto ---
     if (path === '/finance/mine') {
+      // #3 クールダウンチェック（60秒）
+      const CD_SEC = 60;
+      const cdKey = `mine_cd:${userId}`;
+      const lastMine = await env.SESSIONS.get(cdKey);
+      if (lastMine) {
+        const elapsed = Math.floor((Date.now() - parseInt(lastMine)) / 1000);
+        if (elapsed < CD_SEC) {
+          return json({ error: `クールダウン中です。あと${CD_SEC - elapsed}秒お待ちください`, remainingSeconds: CD_SEC - elapsed }, 429);
+        }
+      }
+
       const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
       if (!user) return json({ error: 'ユーザーが見つかりません' }, 404);
 
+      // #10 インフレ適用
+      const finBal = await applyDailyInflation(env, userId, parseInt(user.finance_balance || '0'));
       const minedAmount = Math.floor(Math.random() * 401) + 100; // 100 ~ 500
-      const newBalance = parseInt(user.finance_balance || '0') + minedAmount;
+      const newBalance = finBal + minedAmount;
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
+      await env.SESSIONS.put(cdKey, Date.now().toString(), { expirationTtl: CD_SEC + 10 });
 
-      return json({ minedAmount, newBalance });
+      return json({ minedAmount, newBalance, cooldownSeconds: CD_SEC });
+    }
+
+    // --- Admin: Reset Balance ---
+    if (path === '/finance/admin/reset-balance') {
+      const admin = await env.DB.prepare('SELECT role FROM users WHERE id = ?').bind(userId).first<{ role: string }>();
+      if (!admin || admin.role !== 'admin') return json({ error: '管理者権限が必要です' }, 403);
+      const { targetUserId, amount } = await request.json() as { targetUserId: string; amount?: number };
+      if (!targetUserId) return json({ error: 'targetUserIdが必要です' }, 400);
+      const newBal = Math.max(0, Math.floor(amount ?? 10000));
+      await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBal.toString(), targetUserId).run();
+      return json({ success: true, targetUserId, newBalance: newBal });
     }
 
     // --- Market: Buy ---
     if (path === '/finance/market/buy') {
       const { assetId, quantity } = await request.json() as { assetId: string, quantity: number };
       const asset = MARKET_ASSETS.find(a => a.id === assetId);
-      if (!asset || quantity <= 0) return json({ error: '無効なリクエストです' }, 400);
+      if (!asset || quantity <= 0 || !Number.isInteger(quantity)) return json({ error: '無効なリクエストです' }, 400);
 
       const currentPrice = getPriceAtTime(asset, Date.now());
-      const totalCost = currentPrice * quantity;
+      const baseTotal = currentPrice * quantity;
+
+      // #8 スリッページ（大口ペナルティ）
+      const slippageRate = quantity >= 50 ? 0.05 : quantity >= 10 ? 0.02 : 0;
+      const slippageAmount = Math.floor(baseTotal * slippageRate);
+      const effectivePrice = (baseTotal + slippageAmount) / quantity;
+
+      // #7 手数料 3%
+      const feeAmount = Math.floor((baseTotal + slippageAmount) * 0.03);
+
+      // #1 取引上限
+      const totalCost = baseTotal + slippageAmount + feeAmount;
+      if (totalCost > 10_000_000) return json({ error: '1回の取引上限は1000万ptです' }, 400);
 
       const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
-      const finBal = parseInt(user?.finance_balance || '0');
-      if (!user || finBal < totalCost) {
-        return json({ error: 'ファイナンス残高が不足しています' }, 400);
-      }
+      if (!user) return json({ error: 'ユーザーが見つかりません' }, 404);
+      // #10 インフレ適用
+      const finBal = await applyDailyInflation(env, userId, parseInt(user.finance_balance || '0'));
+      if (finBal < totalCost) return json({ error: 'ファイナンス残高が不足しています' }, 400);
 
       // Check existing portfolio
       const existing = await env.DB.prepare('SELECT * FROM user_assets WHERE user_id = ? AND asset_id = ?').bind(userId, assetId).first<{ quantity: number, avg_buy_price: number }>();
-      
+
       if (existing) {
         const newQuantity = existing.quantity + quantity;
-        const newAvgPrice = ((existing.quantity * existing.avg_buy_price) + totalCost) / newQuantity;
+        const newAvgPrice = ((existing.quantity * existing.avg_buy_price) + (baseTotal + slippageAmount)) / newQuantity;
         await env.DB.prepare('UPDATE user_assets SET quantity = ?, avg_buy_price = ? WHERE user_id = ? AND asset_id = ?')
           .bind(newQuantity, newAvgPrice, userId, assetId).run();
       } else {
         const id = crypto.randomUUID();
         await env.DB.prepare('INSERT INTO user_assets (id, user_id, asset_id, quantity, avg_buy_price) VALUES (?, ?, ?, ?, ?)')
-          .bind(id, userId, assetId, quantity, currentPrice).run();
+          .bind(id, userId, assetId, quantity, effectivePrice).run();
       }
 
       const newBalance = finBal - totalCost;
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
-      return json({ success: true, newBalance, assetId, quantity, price: currentPrice });
+      return json({ success: true, newBalance, assetId, quantity, price: currentPrice, fee: feeAmount, slippage: slippageAmount, totalCost });
     }
 
     // --- Market: Sell ---
@@ -842,13 +959,26 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       const asset = MARKET_ASSETS.find(a => a.id === assetId);
       if (!asset || quantity <= 0) return json({ error: '無効なリクエストです' }, 400);
 
-      const existing = await env.DB.prepare('SELECT * FROM user_assets WHERE user_id = ? AND asset_id = ?').bind(userId, assetId).first<{ quantity: number }>();
+      const existing = await env.DB.prepare('SELECT * FROM user_assets WHERE user_id = ? AND asset_id = ?').bind(userId, assetId).first<{ quantity: number; avg_buy_price: number }>();
       if (!existing || existing.quantity < quantity) {
         return json({ error: '保有数が不足しています' }, 400);
       }
 
       const currentPrice = getPriceAtTime(asset, Date.now());
-      const totalEarned = currentPrice * quantity;
+      const grossEarned = currentPrice * quantity;
+
+      // #1 取引上限
+      if (grossEarned > 10_000_000) return json({ error: '1回の取引上限は1000万ptです' }, 400);
+
+      // #7 手数料 3%
+      const feeAmount = Math.floor(grossEarned * 0.03);
+      const netEarned = grossEarned - feeAmount;
+
+      // #2 累進課税（利益部分のみ）
+      const costBasis = Math.floor(existing.avg_buy_price * quantity);
+      const profit = Math.max(0, netEarned - costBasis);
+      const { taxAmount } = applyProgressiveTax(profit);
+      const totalEarned = netEarned - taxAmount;
 
       const newQuantity = existing.quantity - quantity;
       if (newQuantity === 0) {
@@ -858,10 +988,13 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       }
 
       const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
-      const newBalance = parseInt(user?.finance_balance || '0') + totalEarned;
+      if (!user) return json({ error: 'ユーザーが見つかりません' }, 404);
+      // #10 インフレ適用
+      const finBal = await applyDailyInflation(env, userId, parseInt(user.finance_balance || '0'));
+      const newBalance = finBal + totalEarned;
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
-      return json({ success: true, newBalance, assetId, quantity, price: currentPrice, earned: totalEarned });
+      return json({ success: true, newBalance, assetId, quantity, price: currentPrice, grossEarned, fee: feeAmount, tax: taxAmount, earned: totalEarned });
     }
 
     // --- Deposit: Mamazon Shopping Balance → Finance Balance ---

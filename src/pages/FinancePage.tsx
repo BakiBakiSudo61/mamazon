@@ -17,6 +17,13 @@ export function FinancePage() {
   const [miningPhase, setMiningPhase] = useState('');
   const [miningProgress, setMiningProgress] = useState(0);
   const [mineHash, setMineHash] = useState('');
+  const [mineCooldown, setMineCooldown] = useState(0);
+
+  useEffect(() => {
+    if (mineCooldown <= 0) return;
+    const t = setInterval(() => setMineCooldown(s => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [mineCooldown > 0]);
 
   useEffect(() => {
     const metaTheme = document.querySelector('meta[name="theme-color"]');
@@ -92,7 +99,7 @@ export function FinancePage() {
 
     try {
       const [res] = await Promise.all([
-        api.post<{ minedAmount: number }>('/finance/mine', {}),
+        api.post<{ minedAmount: number; cooldownSeconds?: number }>('/finance/mine', {}),
         minDelay,
       ]);
       clearInterval(phaseTimer);
@@ -106,6 +113,7 @@ export function FinancePage() {
         setMiningLoading(false);
         setMiningPhase('');
         setMiningProgress(0);
+        setMineCooldown(res.cooldownSeconds ?? 60);
         setMsg(`⛏️ マイニング成功！ ¥${res.minedAmount.toLocaleString()} 獲得！`);
         setTimeout(() => setMsg(''), 4000);
       }, 600);
@@ -116,7 +124,12 @@ export function FinancePage() {
       setMiningLoading(false);
       setMiningPhase('');
       setMiningProgress(0);
-      setMsg(`❌ ${err instanceof Error ? err.message : 'エラーが発生しました'}`);
+      const errMsg = err instanceof Error ? err.message : 'エラーが発生しました';
+      if (errMsg.includes('クールダウン') || errMsg.includes('お待ち')) {
+        const m = errMsg.match(/(\d+)秒/);
+        if (m) setMineCooldown(parseInt(m[1]));
+      }
+      setMsg(`❌ ${errMsg}`);
     }
   };
 
@@ -220,6 +233,11 @@ export function FinancePage() {
               {mineHash && (
                 <div className={styles.mineHash}>{mineHash}</div>
               )}
+            </div>
+          ) : mineCooldown > 0 ? (
+            <div className={styles.mineCooldown}>
+              <span>⏳ クールダウン中...</span>
+              <span className={styles.cdTimer}>{mineCooldown}秒</span>
             </div>
           ) : (
             <button className={styles.mineBtn} onClick={handleMine}>

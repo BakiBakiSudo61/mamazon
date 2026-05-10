@@ -179,12 +179,26 @@ export function Market() {
     const quantity = tradeAmounts[assetId] || 0;
     if (quantity <= 0) return;
     try {
-      const res = await api.post<{ quantity: number }>(`/finance/market/${action}`, { assetId, quantity });
-      setMessage(`${res.quantity} ${assetId} を${action === 'buy' ? '購入' : '売却'}しました！`);
+      const res = await api.post<{
+        quantity: number; fee?: number; slippage?: number; tax?: number; earned?: number; totalCost?: number
+      }>(`/finance/market/${action}`, { assetId, quantity });
+
+      if (action === 'buy') {
+        const parts = [`${res.quantity} ${assetId} を購入しました！`];
+        if (res.fee) parts.push(`手数料: ¥${res.fee.toLocaleString()}`);
+        if (res.slippage) parts.push(`スリッページ: ¥${res.slippage.toLocaleString()}`);
+        setMessage(parts.join(' / '));
+      } else {
+        const parts = [`${res.quantity} ${assetId} を売却しました！`];
+        if (res.fee) parts.push(`手数料: ¥${res.fee.toLocaleString()}`);
+        if (res.tax) parts.push(`税: ¥${res.tax.toLocaleString()}`);
+        if (res.earned) parts.push(`手取り: ¥${res.earned.toLocaleString()}`);
+        setMessage(parts.join(' / '));
+      }
       setTradeAmounts({ ...tradeAmounts, [assetId]: 0 });
       await fetchMe();
       await fetchPortfolio();
-      setTimeout(() => setMessage(''), 3000);
+      setTimeout(() => setMessage(''), 5000);
     } catch (err: any) {
       setMessage(`❌ ${err.message || 'エラーが発生しました'}`);
       setTimeout(() => setMessage(''), 4000);

@@ -402,6 +402,22 @@
   50% { opacity: 0.7; }
 }
 
+.mineCooldown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.95rem;
+  padding: 1rem;
+}
+.cdTimer {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: rgba(255,200,0,0.8);
+  font-variant-numeric: tabular-nums;
+}
+
 .navGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
