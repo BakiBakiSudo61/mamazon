@@ -440,8 +440,9 @@ export async function handleFinance(path: string, request: Request, env: Env, se
     if (path === '/finance/gamble/horseracing/bet') {
       const { amount, horseIndex, horseIndex2, horseIndex3, betType, raceId } = await request.json() as { amount: number, horseIndex: number, horseIndex2?: number, horseIndex3?: number, betType?: string, raceId: string };
       const type = betType || 'win';
-      if (amount <= 0 || horseIndex < 0 || horseIndex > 17 || !raceId) return json({ error: '無効なリクエストです' }, 400);
-      if (amount > 1_000_000) return json({ error: 'ベット上限は100万ptです' }, 400);
+      const amt = Number(amount);
+      if (!Number.isFinite(amt) || amt <= 0 || typeof horseIndex !== 'number' || horseIndex < 0 || horseIndex > 17 || !raceId) return json({ error: '無効なリクエストです' }, 400);
+      if (amt > 1_000_000) return json({ error: 'ベット上限は100万ptです' }, 400);
       if (type === 'quinella' && (horseIndex2 === undefined || horseIndex2 < 0 || horseIndex2 > 17 || horseIndex === horseIndex2)) {
         return json({ error: '馬連の指定が無効です' }, 400);
       }
@@ -461,15 +462,15 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
       const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
       const finBal = parseInt(user?.finance_balance || '0');
-      if (!user || finBal < amount) {
+      if (!user || finBal < amt) {
         return json({ error: 'ファイナンス残高が不足しています' }, 400);
       }
 
       const betId = crypto.randomUUID();
       await env.DB.prepare('INSERT INTO horse_bets (id, user_id, race_id, horse_index, horse_index_2, horse_index_3, bet_type, amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-        .bind(betId, userId, raceId, horseIndex, horseIndex2 ?? null, (horseIndex3 ?? null), type, amount).run();
+        .bind(betId, userId, raceId, horseIndex, horseIndex2 ?? null, (horseIndex3 ?? null), type, amt).run();
 
-      const newBalance = finBal - amount;
+      const newBalance = finBal - amt;
       await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
       return json({ success: true, newBalance, betId });
@@ -790,52 +791,6 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       return json({ ticket, drawDate, ticketCount: ids.length, newBalance });
     }
 
-    if (path === '/finance/gamble/lottery/status') {
-      // Get today's draw status
-      const now = new Date();
-      const jstNow = new Date(now.getTime() + 9 * 3600000);
-      const jstHour = jstNow.getUTCHours();
-      const todayDate = jstNow.toISOString().slice(0, 10);
-
-      // Check if draw has happened (12:00 JST = 3:00 UTC)
-      const drawn = jstHour >= 12;
-
-      // Yesterday's draw (if before 12:00, show yesterday's results)
-      const yesterdayDate = new Date(jstNow.getTime() - 86400000).toISOString().slice(0, 10);
-      const tomorrowDate = new Date(jstNow.getTime() + 86400000).toISOString().slice(0, 10);
-      // activeDrawDate: the draw that newly purchased tickets belong to
-      const activeDrawDate = drawn ? tomorrowDate : todayDate;
-      const resultsDrawDate = drawn ? todayDate : yesterdayDate;
-
-      // Get winning numbers (deterministic from date)
-      const winning = getDailyLotteryNumbers(resultsDrawDate);
-
-      // Get user's tickets for today and results draw
-      const todayTickets = await getUserLotteryTickets(env, userId, activeDrawDate);
-      const resultTickets = await getUserLotteryTickets(env, userId, resultsDrawDate);
-
-      // Calculate next draw time
-      const nextDraw = new Date(jstNow);
-      if (drawn) {
-        nextDraw.setDate(nextDraw.getDate() + 1);
-      }
-      nextDraw.setUTCHours(3, 0, 0, 0); // 12:00 JST = 03:00 UTC
-      const nextDrawISO = nextDraw.toISOString();
-
-      return json({
-        drawn,
-        drawDate: resultsDrawDate,
-        nextDraw: nextDrawISO,
-        winning: drawn ? winning : null,
-        todayTickets,
-        resultTickets: drawn ? resultTickets.map(t => ({
-          ...t,
-          winning,
-          matches: t.picks.filter((n: number) => winning.includes(n)).length,
-        })) : resultTickets,
-      });
-    }
-
     if (path === '/finance/gamble/lottery/claim') {
       // Claim all unclaimed winning tickets
       const now = new Date();
@@ -1073,6 +1028,36 @@ export async function handleFinance(path: string, request: Request, env: Env, se
         'SELECT id, email, display_name, avatar_url, role, balance, finance_balance, created_at FROM users ORDER BY created_at DESC'
       ).all<{ id: string; email: string; display_name: string; avatar_url: string; role: string; balance: number; finance_balance: string; created_at: string }>();
       return json(results);
+    }
+
+    // --- Casino: Lottery Status ---
+    if (path === '/finance/gamble/lottery/status') {
+      const now = new Date();
+      const jstNow = new Date(now.getTime() + 9 * 3600000);
+      const jstHour = jstNow.getUTCHours();
+      const todayDate = jstNow.toISOString().slice(0, 10);
+      const drawn = jstHour >= 12;
+      const yesterdayDate = new Date(jstNow.getTime() - 86400000).toISOString().slice(0, 10);
+      const tomorrowDate = new Date(jstNow.getTime() + 86400000).toISOString().slice(0, 10);
+      const activeDrawDate = drawn ? tomorrowDate : todayDate;
+      const resultsDrawDate = drawn ? todayDate : yesterdayDate;
+      const winning = getDailyLotteryNumbers(resultsDrawDate);
+      const todayTickets = await getUserLotteryTickets(env, userId, activeDrawDate);
+      const resultTickets = await getUserLotteryTickets(env, userId, resultsDrawDate);
+      const nextDraw = new Date(jstNow);
+      if (drawn) nextDraw.setDate(nextDraw.getDate() + 1);
+      nextDraw.setUTCHours(3, 0, 0, 0);
+      return json({
+        drawn,
+        drawDate: resultsDrawDate,
+        nextDraw: nextDraw.toISOString(),
+        winning: drawn ? winning : null,
+        todayTickets,
+        resultTickets: drawn ? resultTickets.map(t => ({
+          ...t, winning,
+          matches: t.picks.filter((n: number) => winning.includes(n)).length,
+        })) : resultTickets,
+      });
     }
 
     // --- Casino: Horse Racing Info ---

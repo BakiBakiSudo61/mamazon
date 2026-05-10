@@ -8,7 +8,7 @@ const BET_PRESETS = [100, 500, 1000, 5000];
 
 export function HorseRacing() {
   const { user, fetchMe } = useAuthStore();
-  const [betAmount, setBetAmount] = useState(100);
+  const [betAmount, setBetAmount] = useState('100');
   const [betType, setBetType] = useState<'win' | 'quinella' | 'trifecta'>('win');
   const [selectedHorses, setSelectedHorses] = useState<number[]>([]);
   
@@ -88,9 +88,10 @@ export function HorseRacing() {
     if (betType === 'trifecta' && selectedHorses.length !== 3) return alert('馬を3頭選んでください（1着→、2着→、3着の順に）');
 
     setActionLoading(true);
+    const parsedBet = Math.max(1, parseInt(betAmount) || 1);
     try {
       await api.post('/finance/gamble/horseracing/bet', {
-        amount: betAmount,
+        amount: parsedBet,
         betType,
         horseIndex: selectedHorses[0],
         horseIndex2: betType !== 'win' ? selectedHorses[1] : undefined,
@@ -113,14 +114,15 @@ export function HorseRacing() {
     if (betType === 'trifecta' && selectedHorses.length !== 3) return alert('馬を3頭選んでください（1着→、2着→、3着の順に）');
 
     setActionLoading(true);
+    const parsedBet = Math.max(1, parseInt(betAmount) || 1);
     setDemoResult(null);
     setShowManbaken(false);
     setHorsePositions(Array(18).fill(0));
-    setCommentary('ゲートが開いた！各馬一斌にスタート！！');
+    setCommentary('ゲートが開いた！各馬一気にスタート！！');
     
     try {
       const res = await api.post<{ winner: number, runnerUp: number, thirdPlace: number, payout: number, horses: any[] }>('/finance/gamble/horseracing/demo', {
-        amount: betAmount,
+        amount: parsedBet,
         betType,
         horseIndex: selectedHorses[0],
         horseIndex2: betType !== 'win' ? selectedHorses[1] : undefined,
@@ -162,7 +164,7 @@ export function HorseRacing() {
             setTimeout(() => {
               setRacing(false);
               setDemoResult(res);
-              if (res.payout >= betAmount * 100) {
+              if (res.payout >= (parseInt(betAmount) || 1) * 100) {
                 setShowManbaken(true);
               }
               fetchMe();
@@ -347,19 +349,19 @@ export function HorseRacing() {
           {BET_PRESETS.map(v => (
             <button
               key={v}
-              className={`${styles.chip} ${betAmount === v ? styles.chipActive : ''}`}
-              onClick={() => setBetAmount(v)}
+              className={`${styles.chip} ${betAmount === String(v) ? styles.chipActive : ''}`}
+              onClick={() => setBetAmount(String(v))}
               disabled={actionLoading || racing}
             >
               ¥{v.toLocaleString()}
             </button>
           ))}
           <input
-            type="number"
-            min="100"
-            step="100"
+            type="text"
+            inputMode="numeric"
             value={betAmount}
-            onChange={e => setBetAmount(Number(e.target.value))}
+            onChange={e => setBetAmount(e.target.value.replace(/[^0-9]/g, ''))}
+            onBlur={e => setBetAmount(String(Math.max(1, parseInt(e.target.value) || 1)))}
             className={styles.betInput}
             disabled={actionLoading || racing}
           />
