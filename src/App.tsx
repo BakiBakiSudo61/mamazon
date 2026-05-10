@@ -50,6 +50,14 @@ const RequireSeller: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   return <>{children}</>;
 };
 
+const RequireAdmin: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, initialized } = useAuthStore();
+  if (!initialized) return <div className="page-loading">読み込み中...</div>;
+  if (!user) return <Navigate to="/" replace />;
+  if (user.role !== 'admin') return <Navigate to="/home" replace />;
+  return <>{children}</>;
+};
+
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="app-layout">
     <Header />
@@ -100,7 +108,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/seller/dashboard" element={<Layout><RequireSeller><Dashboard /></RequireSeller></Layout>} />
       <Route path="/seller/product/new" element={<Layout><RequireSeller><ProductForm mode="new" /></RequireSeller></Layout>} />
       <Route path="/seller/product/:id/edit" element={<Layout><RequireSeller><ProductForm mode="edit" /></RequireSeller></Layout>} />
-      <Route path="/admin" element={<Layout><RequireAuth><AdminPage /></RequireAuth></Layout>} />
+      <Route path="/admin" element={<Layout><RequireAdmin><AdminPage /></RequireAdmin></Layout>} />
       <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
   );

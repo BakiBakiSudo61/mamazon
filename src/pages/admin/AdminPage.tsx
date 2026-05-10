@@ -1,6 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuthStore } from '../../stores/authStore';
 import { api } from '../../api/client';
 import { Users, Coins, ShoppingBag, RefreshCw, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import styles from './AdminPage.module.css';
@@ -23,7 +21,6 @@ function fmt(n: number) {
 }
 
 export function AdminPage() {
-  const { user, initialized } = useAuthStore();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -46,9 +43,6 @@ export function AdminPage() {
   }, []);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
-
-  if (!initialized) return <div className={styles.loading}>読み込み中...</div>;
-  if (!user || user.role !== 'admin') return <Navigate to="/home" replace />;
 
   const filtered = users.filter(u =>
     u.email.toLowerCase().includes(search.toLowerCase()) ||
