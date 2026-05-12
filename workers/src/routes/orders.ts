@@ -12,6 +12,30 @@ interface CartItem {
   quantity: number;
 }
 
+/** 金額に応じた段階逓減ポイント計算（BigInt版）
+ * 〜10,000pt: 1.0% / 〜100,000pt: 0.5% / 〜1,000,000pt: 0.3% / それ以上: 0.1%
+ */
+function calcTieredPoints(total: bigint): bigint {
+  const TIERS: Array<{ upto: bigint; rate: bigint }> = [
+    { upto: 10_000n,    rate: 100n }, // 1.0%
+    { upto: 100_000n,   rate: 50n  }, // 0.5%
+    { upto: 1_000_000n, rate: 30n  }, // 0.3%
+  ];
+  const DENOM = 10_000n;
+  let points = 0n;
+  let prev = 0n;
+  for (const tier of TIERS) {
+    if (total <= prev) break;
+    const slice = total < tier.upto ? total - prev : tier.upto - prev;
+    points += slice * tier.rate / DENOM;
+    prev = tier.upto;
+  }
+  if (total > 1_000_000n) {
+    points += (total - 1_000_000n) * 10n / DENOM; // 0.1%
+  }
+  return points;
+}
+
 async function ensurePointsSchema(env: Env) {
   try {
     await env.DB.prepare(`ALTER TABLE users ADD COLUMN points TEXT DEFAULT '0'`).run();
@@ -107,8 +131,8 @@ export async function handleOrders(
       }
     }
 
-    // Award 1% points to buyer
-    const earnedPoints = total / 100n; // 1% of total
+    // Award tiered points to buyer
+    const earnedPoints = calcTieredPoints(total);
     if (earnedPoints > 0n) {
       const buyerPoints = await env.DB.prepare('SELECT points FROM users WHERE id = ?')
         .bind(session.userId).first<{ points: string }>();

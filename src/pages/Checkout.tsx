@@ -47,8 +47,24 @@ export const Checkout: React.FC = () => {
 
   const subtotal = totalPrice();
   const earnedPoints = (() => {
-    try { return Math.floor(Number(BigInt(String(subtotal).replace(/[^0-9]/g, '') || '0')) * 0.01); }
-    catch { return 0; }
+    try {
+      const total = Number(String(subtotal).replace(/[^0-9]/g, '') || '0');
+      const TIERS = [
+        { upto: 10_000,    rate: 0.010 },
+        { upto: 100_000,   rate: 0.005 },
+        { upto: 1_000_000, rate: 0.003 },
+      ];
+      let pts = 0;
+      let prev = 0;
+      for (const tier of TIERS) {
+        if (total <= prev) break;
+        const slice = Math.min(total, tier.upto) - prev;
+        pts += Math.floor(slice * tier.rate);
+        prev = tier.upto;
+      }
+      if (total > 1_000_000) pts += Math.floor((total - 1_000_000) * 0.001);
+      return pts;
+    } catch { return 0; }
   })();
 
   return (
