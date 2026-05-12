@@ -46,6 +46,10 @@ export const Checkout: React.FC = () => {
   };
 
   const subtotal = totalPrice();
+  const earnedPoints = (() => {
+    try { return Math.floor(Number(BigInt(String(subtotal).replace(/[^0-9]/g, '') || '0')) * 0.01); }
+    catch { return 0; }
+  })();
 
   return (
     <div className={styles.page}>
@@ -100,6 +104,12 @@ export const Checkout: React.FC = () => {
               <span>合計</span>
               <span className={styles.totalAmt}>{formatPrice(subtotal)}</span>
             </div>
+            {earnedPoints > 0 && (
+              <div className={styles.totalRow} style={{ color: '#f59e0b', fontSize: '0.88rem', fontWeight: 500 }}>
+                <span>🎁 獲得予定ポイント</span>
+                <span>{earnedPoints.toLocaleString()} pt</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

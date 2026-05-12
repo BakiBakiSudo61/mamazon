@@ -7,6 +7,7 @@ export interface User {
   role: 'buyer' | 'seller' | 'both';
   is_admin: number;
   balance: number;
+  points: number;
   finance_balance: number;
   created_at: string;
 }
@@ -52,6 +53,7 @@ export interface Order {
   status: 'ordered' | 'preparing' | 'shipped' | 'delivered' | 'returned';
   created_at: string;
   updated_at: string;
+  earned_points?: string;
   items?: OrderItem[];
   item_count?: number;
 }

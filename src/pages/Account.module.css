@@ -72,7 +72,7 @@
 
 .email { color: var(--text-muted); font-size: 0.88rem; margin: 0; }
 
-.statCards { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.statCards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
 @media (max-width: 480px) { .statCards { grid-template-columns: 1fr; } }
 
 .statCard {

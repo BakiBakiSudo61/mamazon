@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   address_json  TEXT,
   role          TEXT DEFAULT 'buyer',
   balance       TEXT DEFAULT '1000000',
+  points        TEXT DEFAULT '0',
   finance_balance TEXT DEFAULT '10000',
   created_at    TEXT DEFAULT (datetime('now'))
 );
@@ -50,6 +51,7 @@ CREATE TABLE IF NOT EXISTS orders (
   payment_method  TEXT NOT NULL,
   shipping_addr   TEXT NOT NULL,
   status          TEXT DEFAULT 'ordered',
+  earned_points   TEXT DEFAULT '0',
   created_at      TEXT DEFAULT (datetime('now')),
   updated_at      TEXT DEFAULT (datetime('now'))
 );

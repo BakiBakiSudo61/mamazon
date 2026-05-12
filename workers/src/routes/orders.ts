@@ -12,12 +12,25 @@ interface CartItem {
   quantity: number;
 }
 
+async function ensurePointsSchema(env: Env) {
+  try {
+    await env.DB.prepare(`ALTER TABLE users ADD COLUMN points TEXT DEFAULT '0'`).run();
+  } catch (_) { /* column already exists */ }
+  try {
+    await env.DB.prepare(`UPDATE users SET points = '0' WHERE points IS NULL OR points = ''`).run();
+  } catch (_) { /* ignore */ }
+  try {
+    await env.DB.prepare(`ALTER TABLE orders ADD COLUMN earned_points TEXT DEFAULT '0'`).run();
+  } catch (_) { /* column already exists */ }
+}
+
 export async function handleOrders(
   path: string,
   request: Request,
   env: Env,
   session: SessionData
 ): Promise<Response | null> {
+  await ensurePointsSchema(env);
   // POST /orders
   if (path === '/orders' && request.method === 'POST') {
     const body = await request.json() as {
@@ -92,6 +105,19 @@ export async function handleOrders(
         await env.DB.prepare('UPDATE stores SET sales_count = sales_count + 1 WHERE id = ?')
           .bind(product.store_id).run();
       }
+    }
+
+    // Award 1% points to buyer
+    const earnedPoints = total / 100n; // 1% of total
+    if (earnedPoints > 0n) {
+      const buyerPoints = await env.DB.prepare('SELECT points FROM users WHERE id = ?')
+        .bind(session.userId).first<{ points: string }>();
+      const currentPoints = buyerPoints ? BigInt(buyerPoints.points || '0') : 0n;
+      const newPoints = (currentPoints + earnedPoints).toString();
+      await env.DB.prepare('UPDATE users SET points = ? WHERE id = ?')
+        .bind(newPoints, session.userId).run();
+      await env.DB.prepare('UPDATE orders SET earned_points = ? WHERE id = ?')
+        .bind(earnedPoints.toString(), orderId).run();
     }
 
     // Clear cart
@@ -185,15 +211,26 @@ export async function handleOrders(
             .bind(storeOwner.owner_user_id).first<{ balance: string }>();
           const sellerBalance = sellerRow ? BigInt(sellerRow.balance) : 0n;
           const deduct = BigInt(item.unit_price) * BigInt(item.quantity);
-          const newSellerBalance = sellerBalance > deduct
-            ? (sellerBalance - deduct).toString()
-            : '0';
+          const newSellerBalance = (sellerBalance - deduct).toString();
           await env.DB.prepare('UPDATE users SET balance = ? WHERE id = ?')
             .bind(newSellerBalance, storeOwner.owner_user_id).run();
           await env.DB.prepare('UPDATE stores SET sales_count = MAX(0, sales_count - 1) WHERE id = ?')
             .bind(item.store_id).run();
         }
       }
+    }
+
+    // Deduct earned points from buyer
+    const orderWithPoints = await env.DB.prepare('SELECT earned_points FROM orders WHERE id = ?')
+      .bind(orderId).first<{ earned_points: string }>();
+    const earnedPoints = BigInt(orderWithPoints?.earned_points || '0');
+    if (earnedPoints > 0n) {
+      const buyerPts = await env.DB.prepare('SELECT points FROM users WHERE id = ?')
+        .bind(session.userId).first<{ points: string }>();
+      const currentPts = buyerPts ? BigInt(buyerPts.points || '0') : 0n;
+      const newPts = (currentPts - earnedPoints).toString(); // can go negative
+      await env.DB.prepare('UPDATE users SET points = ? WHERE id = ?')
+        .bind(newPts, session.userId).run();
     }
 
     // Mark order as returned

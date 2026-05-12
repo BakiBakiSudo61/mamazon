@@ -119,6 +119,13 @@ export const Account: React.FC = () => {
             </div>
           </div>
           <div className={styles.statCard}>
+            <Coins size={24} className={styles.statIcon} />
+            <div>
+              <p className={styles.statLabel}>Mamazonポイント</p>
+              <p className={styles.statValue}>{(user.points ?? 0).toLocaleString()} pt</p>
+            </div>
+          </div>
+          <div className={styles.statCard}>
             <Store size={24} className={styles.statIcon} />
             <div>
               <p className={styles.statLabel}>アカウントロール</p>

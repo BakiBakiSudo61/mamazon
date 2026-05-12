@@ -137,6 +137,15 @@ async function ensureSchema(env: Env) {
   try {
     await env.DB.prepare(`ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0`).run();
   } catch (_) { /* column already exists */ }
+  try {
+    await env.DB.prepare(`ALTER TABLE users ADD COLUMN points TEXT DEFAULT '0'`).run();
+  } catch (_) { /* column already exists */ }
+  try {
+    await env.DB.prepare(`UPDATE users SET points = '0' WHERE points IS NULL OR points = ''`).run();
+  } catch (_) { /* ignore */ }
+  try {
+    await env.DB.prepare(`ALTER TABLE orders ADD COLUMN earned_points TEXT DEFAULT '0'`).run();
+  } catch (_) { /* column already exists */ }
 }
 
 const HORSE_PREFIXES = ['マカ', 'キタサン', 'ディープ', 'アーモンド', 'ゴールド', 'シンボリ', 'テイエム', 'メジロ', 'ナリタ', 'ダイワ', 'アグネス', 'グラス', 'エルコンドル', 'スペシャル', 'サイレンス', 'トウカイ', 'オグリ', 'タマモ', 'ミホノ', 'メジロ'];
@@ -911,7 +920,7 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
       // #1 取引上限
       const totalCost = baseTotal + slippageAmount + feeAmount;
-      if (totalCost > 10_000_000) return json({ error: '1回の取引上限は1000万ptです' }, 400);
+      if (totalCost > 100_000_000_000) return json({ error: '1回の取引上限は1000億ptです' }, 400);
 
       const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
       if (!user) return json({ error: 'ユーザーが見つかりません' }, 404);
@@ -954,7 +963,7 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       const grossEarned = currentPrice * quantity;
 
       // #1 取引上限
-      if (grossEarned > 10_000_000) return json({ error: '1回の取引上限は1000万ptです' }, 400);
+      if (grossEarned > 100_000_000_000) return json({ error: '1回の取引上限は1000億ptです' }, 400);
 
       // #7 手数料 3%
       const feeAmount = Math.floor(grossEarned * 0.03);

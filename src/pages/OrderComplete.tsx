@@ -44,6 +44,12 @@ export const OrderComplete: React.FC = () => {
               <span>合計金額</span>
               <span className={styles.amount}>{formatPrice(order.total_amount)}</span>
             </div>
+            {order.earned_points && BigInt(order.earned_points) > 0n && (
+              <div className={styles.row} style={{ color: '#f59e0b' }}>
+                <span>🎁 獲得ポイント</span>
+                <span style={{ fontWeight: 700 }}>{Number(order.earned_points).toLocaleString()} pt</span>
+              </div>
+            )}
             <div className={styles.row}>
               <span>ステータス</span>
               <span className={styles.status}>{STATUS_LABEL[order.status] ?? order.status}</span>
