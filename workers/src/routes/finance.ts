@@ -24,7 +24,7 @@ const MARKET_ASSETS: Asset[] = [
   { id: 'SLC',  name: 'SolarChain',   type: 'crypto', basePrice: 22000,      volatility: 0.65, description: '超高速ブロックチェーン' },
   { id: 'DMC',  name: 'DogeMeme',     type: 'crypto', basePrice: 30,         volatility: 1.20, description: 'ミームコイン。予測不能な急騰急落' },
   { id: 'MMC',  name: 'MamaCoin',     type: 'crypto', basePrice: 100,        volatility: 0.50, description: 'Mamazon独自仮想通貨' },
-  { id: 'PPC',  name: 'PepeChain',    type: 'crypto', basePrice: 15,         volatility: 2.00, description: '伝説のミームコイン。ただ暴れる' },
+  { id: 'PPC',  name: 'PepeChain',    type: 'crypto', basePrice: 100,        volatility: 1.30, description: '伝説のミームコイン。ただ暴れる' },
 ];
 
 /** Wang hash — deterministic pseudo-random 0..1 from any 32-bit integer */
