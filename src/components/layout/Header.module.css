@@ -205,16 +205,20 @@
 
 .cartBadge {
   position: absolute;
-  top: -8px;
-  right: -5px;
-  background: transparent;
-  color: var(--amazon-orange);
-  font-size: 1rem;
+  top: -6px;
+  right: -8px;
+  background: var(--amazon-orange);
+  color: #111111;
+  font-size: 0.7rem;
   font-weight: 700;
-  min-width: 20px;
+  min-width: 16px;
+  height: 16px;
+  line-height: 1;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0 3px;
 }
 
 .cartText {

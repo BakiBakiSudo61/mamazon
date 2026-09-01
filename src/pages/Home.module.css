@@ -121,7 +121,7 @@
 }
 
 @media (max-width: 640px) {
-  .inner { margin-top: -1.5rem; padding: 0 0.5rem 2rem; gap: 1rem; }
+  .inner { padding: 0 0.5rem 2rem; gap: 1rem; }
 }
 
 /* ============ Category Card Grid ============ */

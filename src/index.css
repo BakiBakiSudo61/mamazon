@@ -88,6 +88,8 @@ button {
   cursor: pointer; 
   transition: var(--transition); 
   border: none;
+  appearance: none;
+  -webkit-appearance: none;
 }
 input, select, textarea { 
   font-family: inherit; 
