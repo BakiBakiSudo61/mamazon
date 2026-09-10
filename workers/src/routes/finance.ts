@@ -670,16 +670,17 @@ export async function handleFinance(path: string, request: Request, env: Env, se
     }
 
     // --- Casino: Blackjack ---
+    // Game state (hand/dealerHand/bet) is kept authoritatively server-side in KV,
+    // keyed per-user. Client-supplied hand/dealerHand values are never trusted,
+    // since accepting them allowed forging arbitrary hands to guarantee wins.
     if (path === '/finance/gamble/blackjack') {
-      const { action, amount, hand: clientHand, dealerHand: clientDealerHand } = await request.json() as {
+      const { action, amount } = await request.json() as {
         action: 'start' | 'hit' | 'stand';
-        amount: number;
-        hand?: number[];
-        dealerHand?: number[];
+        amount?: number;
       };
 
-      const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
-      const finBal = parseInt(user?.finance_balance || '0');
+      type BjState = { amount: number; hand: number[]; dealerHand: number[] };
+      const bjKey = `blackjack:${userId}`;
 
       const drawCard = () => Math.floor(Math.random() * 13) + 1; // 1-13 (A=1, J/Q/K=10)
       const cardValue = (c: number) => c > 10 ? 10 : c;
@@ -691,9 +692,20 @@ export async function handleFinance(path: string, request: Request, env: Env, se
       };
 
       if (action === 'start') {
-        if (amount <= 0) return json({ error: '無効な金額です' }, 400);
-        if (amount > 1_000_000) return json({ error: 'ベット上限は100万ptです' }, 400);
-        if (!user || finBal < amount) return json({ error: 'ファイナンス残高が不足しています' }, 400);
+        const betAmount = Number(amount);
+        if (!Number.isFinite(betAmount) || betAmount <= 0) return json({ error: '無効な金額です' }, 400);
+        if (betAmount > 1_000_000) return json({ error: 'ベット上限は100万ptです' }, 400);
+
+        const existing = await env.SESSIONS.get(bjKey);
+        if (existing) return json({ error: '進行中のゲームがあります' }, 409);
+
+        const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
+        const finBal = parseInt(user?.finance_balance || '0');
+        if (!user || finBal < betAmount) return json({ error: 'ファイナンス残高が不足しています' }, 400);
+
+        // Reserve the stake immediately so the balance can't be manipulated mid-game
+        const reservedBalance = finBal - betAmount;
+        await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(reservedBalance.toString(), userId).run();
 
         const playerHand = [drawCard(), drawCard()];
         const dealerHand = [drawCard(), drawCard()];
@@ -702,44 +714,54 @@ export async function handleFinance(path: string, request: Request, env: Env, se
         // Natural blackjack check
         if (playerTotal === 21) {
           const dealerTotal = handTotal(dealerHand);
-          let payout = dealerTotal === 21 ? amount : Math.floor(amount * 2.5);
+          let payout = dealerTotal === 21 ? betAmount : Math.floor(betAmount * 2.5);
           const result = dealerTotal === 21 ? 'push' : 'blackjack';
           let bjTax = 0;
           if (result === 'blackjack') {
-            const taxed = applyProgressiveTax(payout - amount);
+            const taxed = applyProgressiveTax(payout - betAmount);
             bjTax = taxed.taxAmount;
-            payout = amount + taxed.afterTax;
+            payout = betAmount + taxed.afterTax;
           }
-          const newBalance = finBal - amount + payout;
+          const newBalance = reservedBalance + payout;
           await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
           return json({ hand: playerHand, dealerHand, playerTotal, dealerTotal, result, payout, newBalance, done: true, taxAmount: bjTax });
         }
 
-        return json({ hand: playerHand, dealerHand: [dealerHand[0], 0], dealerFull: dealerHand, playerTotal, done: false });
+        await env.SESSIONS.put(bjKey, JSON.stringify({ amount: betAmount, hand: playerHand, dealerHand } as BjState), { expirationTtl: 900 });
+        return json({ hand: playerHand, dealerHand: [dealerHand[0], 0], playerTotal, newBalance: reservedBalance, done: false });
       }
 
       if (action === 'hit') {
-        if (!clientHand) return json({ error: '手札がありません' }, 400);
+        const raw = await env.SESSIONS.get(bjKey);
+        if (!raw) return json({ error: '進行中のゲームがありません' }, 400);
+        const state = JSON.parse(raw) as BjState;
+
         const newCard = drawCard();
-        const newHand = [...clientHand, newCard];
-        const total = handTotal(newHand);
+        state.hand.push(newCard);
+        const total = handTotal(state.hand);
 
         if (total > 21) {
-          // Bust
-          const newBalance = finBal - amount;
-          await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
-          return json({ hand: newHand, newCard, playerTotal: total, result: 'bust', payout: 0, newBalance, done: true, dealerHand: clientDealerHand });
+          // Bust — stake was already reserved at start, nothing more to deduct
+          await env.SESSIONS.delete(bjKey);
+          const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
+          const newBalance = parseInt(user?.finance_balance || '0');
+          return json({ hand: state.hand, newCard, playerTotal: total, result: 'bust', payout: 0, newBalance, done: true, dealerHand: state.dealerHand });
         }
 
-        return json({ hand: newHand, newCard, playerTotal: total, done: false });
+        await env.SESSIONS.put(bjKey, JSON.stringify(state), { expirationTtl: 900 });
+        return json({ hand: state.hand, newCard, playerTotal: total, done: false });
       }
 
       if (action === 'stand') {
-        if (!clientHand || !clientDealerHand) return json({ error: 'データ不足です' }, 400);
-        const playerTotal = handTotal(clientHand);
+        const raw = await env.SESSIONS.get(bjKey);
+        if (!raw) return json({ error: '進行中のゲームがありません' }, 400);
+        const state = JSON.parse(raw) as BjState;
+        await env.SESSIONS.delete(bjKey);
+
+        const playerTotal = handTotal(state.hand);
 
         // Dealer draws until 17+
-        const dealerHand = [...clientDealerHand];
+        const dealerHand = [...state.dealerHand];
         while (handTotal(dealerHand) < 17) {
           dealerHand.push(drawCard());
         }
@@ -747,21 +769,24 @@ export async function handleFinance(path: string, request: Request, env: Env, se
 
         let result: string;
         let payout = 0;
-        if (dealerTotal > 21) { result = 'win'; payout = amount * 2; }
-        else if (playerTotal > dealerTotal) { result = 'win'; payout = amount * 2; }
-        else if (playerTotal === dealerTotal) { result = 'push'; payout = amount; }
+        if (dealerTotal > 21) { result = 'win'; payout = state.amount * 2; }
+        else if (playerTotal > dealerTotal) { result = 'win'; payout = state.amount * 2; }
+        else if (playerTotal === dealerTotal) { result = 'push'; payout = state.amount; }
         else { result = 'lose'; payout = 0; }
 
         let taxAmount = 0;
         if (result === 'win') {
-          const taxed = applyProgressiveTax(payout - amount);
+          const taxed = applyProgressiveTax(payout - state.amount);
           taxAmount = taxed.taxAmount;
-          payout = amount + taxed.afterTax;
+          payout = state.amount + taxed.afterTax;
         }
-        const newBalance = finBal - amount + payout;
+
+        const user = await env.DB.prepare('SELECT finance_balance FROM users WHERE id = ?').bind(userId).first<{ finance_balance: string }>();
+        const finBal = parseInt(user?.finance_balance || '0');
+        const newBalance = finBal + payout;
         await env.DB.prepare('UPDATE users SET finance_balance = ? WHERE id = ?').bind(newBalance.toString(), userId).run();
 
-        return json({ hand: clientHand, dealerHand, playerTotal, dealerTotal, result, payout, newBalance, done: true, taxAmount });
+        return json({ hand: state.hand, dealerHand, playerTotal, dealerTotal, result, payout, newBalance, done: true, taxAmount });
       }
 
       return json({ error: '不正なアクションです' }, 400);
@@ -1081,8 +1106,13 @@ export async function handleFinance(path: string, request: Request, env: Env, se
     // --- Casino: Horse Racing Info ---
     if (path === '/finance/gamble/horseracing/info') {
       const schedule = getCurrentRaceSchedule();
+      // The race result is a deterministic function of raceId alone, so the still-open
+      // nextRace must never reveal winner/runnerUp/thirdPlace before betting closes —
+      // doing so would let clients bet on a guaranteed outcome.
+      const { winner: _w, runnerUp: _r, thirdPlace: _t, ...nextRacePublic } = schedule.nextRace;
+      const safeSchedule = { ...schedule, nextRace: nextRacePublic };
       const { results: bets } = await env.DB.prepare("SELECT * FROM horse_bets WHERE user_id = ? AND status = 'pending'").bind(userId).all();
-      return json({ schedule, bets });
+      return json({ schedule: safeSchedule, bets });
     }
     // --- Market: Assets Info ---
     if (path === '/finance/market/assets') {
