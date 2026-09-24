@@ -33,7 +33,7 @@ const ProductRow: React.FC<{ products: Product[] }> = ({ products }) => {
   if (!products.length) return null;
   return (
     <div className={styles.rowWrap}>
-      <button className={`${styles.rowArrow} ${styles.rowArrowLeft}`} onClick={() => scroll(-1)}><ChevronLeft size={20} /></button>
+      <button className={`${styles.rowArrow} ${styles.rowArrowLeft}`} onClick={() => scroll(-1)} aria-label="前へ"><ChevronLeft size={20} /></button>
       <div className={styles.row} ref={ref}>
         {products.map((p) => (
           <div key={p.id} className={styles.rowItem}>
@@ -41,7 +41,7 @@ const ProductRow: React.FC<{ products: Product[] }> = ({ products }) => {
           </div>
         ))}
       </div>
-      <button className={`${styles.rowArrow} ${styles.rowArrowRight}`} onClick={() => scroll(1)}><ChevronRight size={20} /></button>
+      <button className={`${styles.rowArrow} ${styles.rowArrowRight}`} onClick={() => scroll(1)} aria-label="次へ"><ChevronRight size={20} /></button>
     </div>
   );
 };
@@ -71,7 +71,18 @@ export const Home: React.FC = () => {
   useEffect(() => {
     timerRef.current = setInterval(nextSlide, 5000);
     return () => clearInterval(timerRef.current);
-  }, [nextSlide]);
+  }, [nextSlide, slide]);
+
+  // Touch swipe for the hero carousel (mobile)
+  const touchX = useRef<number | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => { touchX.current = e.touches[0].clientX; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchX.current;
+    touchX.current = null;
+    if (Math.abs(dx) < 40) return;
+    if (dx < 0) nextSlide(); else prevSlide();
+  };
 
   // Category filter for all-products section
   const [category, setCategory] = useState('すべて');
@@ -104,7 +115,7 @@ export const Home: React.FC = () => {
   return (
     <div className={styles.page}>
       {/* === Hero Carousel === */}
-      <section className={styles.hero}>
+      <section className={styles.hero} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {HERO_SLIDES.map((s, i) => (
           <div key={i} className={`${styles.heroSlide} ${i === slide ? styles.heroActive : ''}`} style={{ background: s.bg }}>
             <div className={styles.heroContent}>
@@ -114,11 +125,11 @@ export const Home: React.FC = () => {
             </div>
           </div>
         ))}
-        <button className={`${styles.heroArrow} ${styles.heroLeft}`} onClick={prevSlide}><ChevronLeft size={36} /></button>
-        <button className={`${styles.heroArrow} ${styles.heroRight}`} onClick={nextSlide}><ChevronRight size={36} /></button>
+        <button className={`${styles.heroArrow} ${styles.heroLeft}`} onClick={prevSlide} aria-label="前へ"><ChevronLeft size={36} /></button>
+        <button className={`${styles.heroArrow} ${styles.heroRight}`} onClick={nextSlide} aria-label="次へ"><ChevronRight size={36} /></button>
         <div className={styles.heroDots}>
           {HERO_SLIDES.map((_, i) => (
-            <button key={i} className={`${styles.heroDot} ${i === slide ? styles.heroDotActive : ''}`} onClick={() => setSlide(i)} />
+            <button key={i} className={`${styles.heroDot} ${i === slide ? styles.heroDotActive : ''}`} onClick={() => setSlide(i)} aria-label={`スライド${i + 1}`} />
           ))}
         </div>
         <div className={styles.heroFade} />
@@ -129,7 +140,7 @@ export const Home: React.FC = () => {
         <section className={styles.catGrid}>
           {CATEGORIES.map((c) => (
             <Link key={c.name} to={`/search?c=${c.name}`} className={styles.catCard}>
-              <span className={styles.catEmoji}>{c.emoji}</span>
+              <span className={styles.catEmoji} aria-hidden="true">{c.emoji}</span>
               <span className={styles.catName}>{c.name}</span>
             </Link>
           ))}
@@ -156,6 +167,7 @@ export const Home: React.FC = () => {
                 </Link>
               ))}
             </div>
+            <Link to="/search" className={styles.seeMore}>もっと見る</Link>
           </div>
 
           <div className={styles.sectionCard}>
@@ -168,6 +180,7 @@ export const Home: React.FC = () => {
                 </Link>
               ))}
             </div>
+            <Link to="/search" className={styles.seeMore}>もっと見る</Link>
           </div>
 
           <div className={styles.sectionCard}>
@@ -180,6 +193,7 @@ export const Home: React.FC = () => {
                 </Link>
               ))}
             </div>
+            <Link to="/search" className={styles.seeMore}>もっと見る</Link>
           </div>
         </div>
 

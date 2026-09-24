@@ -1,9 +1,19 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Search, User, Package, Store, Menu, X, LogOut, ChevronDown, ArrowLeft, Coins, Heart, ListPlus, Crown } from 'lucide-react';
+import { ShoppingCart, Search, User, Package, Store, Menu, X, LogOut, ChevronDown, ChevronRight, ArrowLeft, Coins, Heart, ListPlus, Crown, MapPin } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useCartStore } from '../../stores/cartStore';
 import styles from './Header.module.css';
+
+const SUB_NAV = ['電子機器', '衣類', '本', 'スポーツ', 'おもちゃ', 'インテリア', '食品'];
+
+/* Amazon-style smile arrow under the logo */
+const Smile: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 100 16" aria-hidden="true">
+    <path d="M4 3 Q50 20 92 4" fill="none" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round" />
+    <path d="M84 1 L94 3.5 L90 12" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 export const Header: React.FC = () => {
   const { user, logout } = useAuthStore();
@@ -26,6 +36,39 @@ export const Header: React.FC = () => {
     await logout();
     navigate('/');
   };
+
+  const renderMenu = () => (
+    <div className={styles.dropdown} onClick={() => setMenuOpen(false)}>
+      {user && <div className={styles.dropdownHeader}>こんにちは、{user.display_name}さん</div>}
+      <Link to="/orders" className={styles.dropdownItem}>
+        <Package size={16} /> 注文履歴
+      </Link>
+      <Link to="/finance" className={styles.dropdownItem}>
+        <Coins size={16} /> ファイナンス・カジノ
+      </Link>
+      <Link to="/account" className={styles.dropdownItem}>
+        <User size={16} /> アカウント
+      </Link>
+      <Link to="/collection" className={styles.dropdownItem}>
+        <Crown size={16} /> コレクション
+      </Link>
+      <Link to="/favorites" className={styles.dropdownItem}>
+        <Heart size={16} /> お気に入り
+      </Link>
+      <Link to="/wishlist" className={styles.dropdownItem}>
+        <ListPlus size={16} /> 欲しいものリスト
+      </Link>
+      {user && (user.role === 'seller' || user.role === 'both') && (
+        <Link to="/seller/dashboard" className={styles.dropdownItem}>
+          <Store size={16} /> 出品者ダッシュボード
+        </Link>
+      )}
+      <hr className={styles.divider} />
+      <button className={styles.dropdownItem} onClick={handleLogout}>
+        <LogOut size={16} /> ログアウト
+      </button>
+    </div>
+  );
 
   if (isFinance) {
     return (
@@ -55,8 +98,9 @@ export const Header: React.FC = () => {
           <button className={styles.mobileMenu} onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
-          <Link to="/home" className={styles.logo}>
-            <span className={styles.logoText}>Mamazon</span>
+          <Link to="/home" className={styles.logo} aria-label="Mamazon ホーム">
+            <span className={styles.logoText}>mamazon</span>
+            <Smile className={styles.logoSmile} />
           </Link>
         </div>
 
@@ -90,37 +134,7 @@ export const Header: React.FC = () => {
                     <span className={styles.accountText}>アカウント＆リスト <ChevronDown size={12}/></span>
                   </div>
                 </button>
-                {menuOpen && (
-                  <div className={styles.dropdown} onClick={() => setMenuOpen(false)}>
-                    <Link to="/orders" className={styles.dropdownItem}>
-                      <Package size={15} /> 注文履歴
-                    </Link>
-                    <Link to="/finance" className={styles.dropdownItem}>
-                      <Coins size={15} /> ファイナンス・カジノ
-                    </Link>
-                    <Link to="/account" className={styles.dropdownItem}>
-                      <User size={15} /> アカウント
-                    </Link>
-                    <Link to="/collection" className={styles.dropdownItem}>
-                      <Crown size={15} /> コレクション
-                    </Link>
-                    <Link to="/favorites" className={styles.dropdownItem}>
-                      <Heart size={15} /> お気に入り
-                    </Link>
-                    <Link to="/wishlist" className={styles.dropdownItem}>
-                      <ListPlus size={15} /> 欲しいものリスト
-                    </Link>
-                    {(user.role === 'seller' || user.role === 'both') && (
-                      <Link to="/seller/dashboard" className={styles.dropdownItem}>
-                        <Store size={15} /> 出品者ダッシュボード
-                      </Link>
-                    )}
-                    <hr className={styles.divider} />
-                    <button className={styles.dropdownItem} onClick={handleLogout}>
-                      <LogOut size={15} /> ログアウト
-                    </button>
-                  </div>
-                )}
+                {menuOpen && renderMenu()}
               </div>
               <Link to="/orders" className={styles.returnsBtn}>
                 <span className={styles.greeting}>返品もこちら</span>
@@ -142,95 +156,90 @@ export const Header: React.FC = () => {
         </nav>
       </div>
 
-      {/* Mobile brand bar (≤640px) */}
-      <div className={styles.mobileBrand}>
-        <div className={styles.mobileBrandLeft}>
-          {canGoBack && (
-            <button
-              className={styles.mobileNavBtn}
-              onClick={() => navigate(-1)}
-              aria-label="前のページに戻る"
-            >
-              <ArrowLeft size={20} />
-            </button>
-          )}
-          <Link to="/home" className={styles.logo}>
-            <span className={styles.logoText}>Mamazon</span>
-          </Link>
-        </div>
-        <div className={styles.mobileBrandRight}>
-          {user ? (
-            <div className={styles.mobileUserMenu}>
+      {/* Desktop sub navigation */}
+      <nav className={styles.subNav} aria-label="カテゴリ">
+        <Link to="/search" className={styles.subNavAll}><Menu size={18} /> すべて</Link>
+        {SUB_NAV.map((c) => (
+          <Link key={c} to={`/search?c=${encodeURIComponent(c)}`} className={styles.subNavLink}>{c}</Link>
+        ))}
+        {user && <Link to="/finance" className={styles.subNavLink}>ファイナンス</Link>}
+        {user && <Link to="/wishlist" className={styles.subNavLink}>欲しいものリスト</Link>}
+      </nav>
+
+      {/* Mobile app-style header (≤640px) */}
+      <div className={styles.mobileHeader}>
+        <div className={styles.mobileBrand}>
+          <div className={styles.mobileBrandLeft}>
+            {canGoBack && (
               <button
                 className={styles.mobileNavBtn}
-                onClick={() => setMenuOpen(!menuOpen)}
-                aria-label="メニュー"
+                onClick={() => navigate(-1)}
+                aria-label="前のページに戻る"
               >
-                <User size={22} />
+                <ArrowLeft size={22} />
               </button>
-              {menuOpen && (
-                <div className={styles.dropdown} onClick={() => setMenuOpen(false)}>
-                  <Link to="/orders" className={styles.dropdownItem}>
-                    <Package size={15} /> 注文履歴
-                  </Link>
-                  <Link to="/finance" className={styles.dropdownItem}>
-                    <Coins size={15} /> ファイナンス・カジノ
-                  </Link>
-                  <Link to="/account" className={styles.dropdownItem}>
-                    <User size={15} /> アカウント
-                  </Link>
-                  <Link to="/collection" className={styles.dropdownItem}>
-                    <Crown size={15} /> コレクション
-                  </Link>
-                  <Link to="/favorites" className={styles.dropdownItem}>
-                    <Heart size={15} /> お気に入り
-                  </Link>
-                  <Link to="/wishlist" className={styles.dropdownItem}>
-                    <ListPlus size={15} /> 欲しいものリスト
-                  </Link>
-                  {(user.role === 'seller' || user.role === 'both') && (
-                    <Link to="/seller/dashboard" className={styles.dropdownItem}>
-                      <Store size={15} /> 出品者ダッシュボード
-                    </Link>
-                  )}
-                  <hr className={styles.divider} />
-                  <button className={styles.dropdownItem} onClick={handleLogout}>
-                    <LogOut size={15} /> ログアウト
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <Link to="/" className={styles.loginBtn}>
-              <span className={styles.loginBtnText}>ログイン</span>
+            )}
+            <Link to="/home" className={styles.mobileLogo} aria-label="Mamazon ホーム">
+              <span>mamazon</span>
+              <Smile className={styles.logoSmile} />
             </Link>
-          )}
-          <Link to="/cart" className={styles.mobileCartLink}>
-            <div className={styles.cartIconWrapper}>
-              <ShoppingCart size={24} />
-              {totalCount > 0 && <span className={styles.cartBadge}>{totalCount}</span>}
-            </div>
-          </Link>
+          </div>
+          <div className={styles.mobileBrandRight}>
+            {user ? (
+              <div className={styles.mobileUserMenu}>
+                <button
+                  className={styles.mobileNavBtn}
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  aria-label="メニュー"
+                  aria-expanded={menuOpen}
+                >
+                  <span className={styles.mobileUserName}>{user.display_name}</span>
+                  <User size={22} />
+                </button>
+                {menuOpen && renderMenu()}
+              </div>
+            ) : (
+              <Link to="/" className={styles.mobileLoginBtn}>
+                ログイン <ChevronRight size={14} />
+              </Link>
+            )}
+            <Link to="/cart" className={styles.mobileCartLink} aria-label="カート">
+              <div className={styles.cartIconWrapper}>
+                <ShoppingCart size={24} />
+                {totalCount > 0 && <span className={styles.cartBadge}>{totalCount}</span>}
+              </div>
+            </Link>
+          </div>
         </div>
-      </div>
 
-      {/* Mobile-only search bar */}
-      <div className={styles.mobileSearchBar}>
-        <form className={styles.mobileSearchForm} onSubmit={handleSearch}>
+        <form className={styles.mobileSearchForm} onSubmit={handleSearch} role="search">
           <div className={styles.mobileSearchContainer}>
+            <button type="submit" className={styles.mobileSearchBtn} aria-label="検索">
+              <Search size={20} />
+            </button>
             <input
               className={styles.mobileSearchInput}
-              type="text"
-              placeholder="商品を検索..."
+              type="search"
+              enterKeyHint="search"
+              placeholder="Mamazon で検索"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
-            <button type="submit" className={styles.mobileSearchBtn}>
-              <Search size={18} color="#333" />
-            </button>
           </div>
         </form>
+
+        <Link to={user ? '/account' : '/'} className={styles.deliverBar}>
+          <MapPin size={16} />
+          <span className={styles.deliverText}>
+            {user ? `お届け先: ${user.display_name}さん - 東京都 架空区` : 'お届け先を選択'}
+          </span>
+          <ChevronDown size={14} />
+        </Link>
       </div>
+
+      {menuOpen && (
+        <button className={styles.backdrop} aria-label="メニューを閉じる" onClick={() => setMenuOpen(false)} />
+      )}
     </header>
   );
 };
