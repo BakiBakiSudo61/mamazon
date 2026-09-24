@@ -10,6 +10,7 @@ export const Footer: React.FC = () => {
   const totalCount = useCartStore((s) => s.totalCount());
   const location = useLocation();
   const p = location.pathname;
+  const isActive = (to: string) => (to === '/' ? p === '/' : p === to || p.startsWith(`${to}/`));
 
   const navItems = user
     ? [
@@ -37,6 +38,9 @@ export const Footer: React.FC = () => {
     <>
       {/* Desktop footer */}
       <footer className={styles.footer}>
+        <button className={styles.backToTop} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          トップへ戻る
+        </button>
         <div className={styles.inner}>
           <div className={styles.brand}>
             <Package size={20} />
@@ -58,7 +62,8 @@ export const Footer: React.FC = () => {
           <Link
             key={item.to}
             to={item.to}
-            className={[styles.mobileNavItem, p === item.to ? styles.mobileNavActive : ''].join(' ')}
+            className={[styles.mobileNavItem, isActive(item.to) ? styles.mobileNavActive : ''].join(' ')}
+            aria-current={isActive(item.to) ? 'page' : undefined}
           >
             {item.icon}
             <span>{item.label}</span>

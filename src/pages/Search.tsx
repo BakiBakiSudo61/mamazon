@@ -39,7 +39,7 @@ export const Search: React.FC = () => {
           <p className={styles.empty}>「{q || c}」に一致する商品が見つかりませんでした</p>
         ) : (
           <div className={styles.grid}>
-            {products.map((p) => <ProductCard key={p.id} product={p} />)}
+            {products.map((p) => <ProductCard key={p.id} product={p} variant="list" />)}
           </div>
         )}
       </div>

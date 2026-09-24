@@ -1,8 +1,24 @@
 .footer {
-  background: var(--surface-0);
-  border-top: 1px solid var(--border);
+  background: #232f3e;
+  color: #ffffff;
   margin-top: auto;
-  padding: 2rem 1rem;
+  padding: 0;
+}
+
+.backToTop {
+  display: block;
+  width: 100%;
+  padding: 0.95rem;
+  background: #37475a;
+  color: #ffffff;
+  font-size: 0.85rem;
+  text-align: center;
+  border: none;
+}
+.backToTop:hover { background: #485769; }
+
+.inner {
+  padding: 2.25rem 1rem;
 }
 
 /* Hide desktop footer on mobile */
@@ -24,7 +40,7 @@
   align-items: center;
   gap: 0.4rem;
   font-weight: 800;
-  color: var(--accent);
+  color: #ffffff;
   font-size: 1.1rem;
 }
 
@@ -36,19 +52,19 @@
 }
 
 .links a {
-  color: var(--text-muted);
+  color: #dddddd;
   text-decoration: none;
   font-size: 0.88rem;
 }
-.links a:hover { color: var(--text); }
+.links a:hover { color: #ffffff; text-decoration: underline; }
 
 .copy {
-  color: var(--text-muted);
+  color: #999999;
   font-size: 0.8rem;
   margin: 0;
 }
 
-/* Mobile bottom navigation bar */
+/* Mobile bottom navigation bar (Amazon app style) */
 .mobileNav {
   display: none;
 }
@@ -61,49 +77,71 @@
     left: 0;
     right: 0;
     z-index: 200;
-    background: #131921;
-    border-top: 1px solid rgba(255,255,255,0.1);
-    height: 60px;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: #ffffff;
+    border-top: 1px solid #d5d9d9;
+    box-shadow: 0 -1px 6px rgba(15, 17, 17, 0.06);
+    height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+    padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   }
 }
 
 .mobileNavItem {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  color: #aaaaaa;
+  gap: 2px;
+  min-width: 0;
+  color: #0f1111;
   text-decoration: none;
-  font-size: 0.65rem;
-  font-weight: 500;
-  transition: color 0.15s;
+  font-size: 0.66rem;
+  font-weight: 400;
   -webkit-tap-highlight-color: transparent;
 }
 
 .mobileNavItem:hover {
-  color: #ffffff;
+  color: #0f1111;
 }
 
-.mobileNavActive {
-  color: var(--amazon-orange);
+.mobileNavItem:active {
+  background: #f3f3f3;
+}
+
+/* Active tab: teal color + indicator bar on top, like the Amazon app */
+.mobileNavActive,
+.mobileNavActive:hover {
+  color: #007185;
+  font-weight: 700;
+}
+
+.mobileNavActive::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 22%;
+  right: 22%;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: #007185;
 }
 
 .mobileBadge {
   position: absolute;
-  top: -6px;
-  right: -8px;
-  background: var(--amazon-orange);
-  color: #111111;
-  font-size: 0.65rem;
+  top: -8px;
+  right: -13px;
+  background: #0f1111;
+  color: #ffffff;
+  font-size: 0.62rem;
   font-weight: 700;
-  min-width: 16px;
-  height: 16px;
-  border-radius: 8px;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 9px;
+  border: 2px solid #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 3px;
+  box-sizing: content-box;
 }

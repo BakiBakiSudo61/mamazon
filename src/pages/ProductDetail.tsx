@@ -234,12 +234,19 @@ export const ProductDetail: React.FC = () => {
           <div className={styles.gallery}>
             {/* Mobile-only: product name + brand above image */}
             <div className={styles.mobileHeader}>
+              <div className={styles.mobileMeta}>
+                {(product.store_name || product.store?.store_name) && (
+                  <Link to={`/store/${product.store_id}`} className={styles.mobileBrand}>
+                    ブランド: {product.store_name || product.store?.store_name}
+                  </Link>
+                )}
+                <a href="#reviews" className={styles.mobileRating}>
+                  <span>{product.rating.toFixed(1)}</span>
+                  <StarRating rating={product.rating} size={13} />
+                  <span className={styles.mobileRatingCount}>{product.review_count}</span>
+                </a>
+              </div>
               <h1 className={styles.mobileTitle}>{product.name}</h1>
-              {(product.store_name || product.store?.store_name) && (
-                <Link to={`/store/${product.store_id}`} className={styles.mobileBrand}>
-                  {product.store_name || product.store?.store_name}
-                </Link>
-              )}
             </div>
             <div className={styles.mainImageWrap}>
               <img src={images[imgIndex] || PLACEHOLDER} alt={product.name} className={styles.mainImage} />
@@ -460,7 +467,7 @@ export const ProductDetail: React.FC = () => {
         </div>
 
         {/* Reviews */}
-        <section className={styles.reviewSection}>
+        <section className={styles.reviewSection} id="reviews">
           <div className={styles.reviewGrid}>
             <div className={styles.reviewSidebar}>
               <h2>カスタマーレビュー</h2>
@@ -604,6 +611,13 @@ export const ProductDetail: React.FC = () => {
         >
           <ShoppingCart size={16} />
           カートに入れる
+        </button>
+        <button
+          className={[styles.mobileFooterBtn, styles.mobileFooterBuy].join(' ')}
+          onClick={handleBuyNow}
+          disabled={buyingNow || (product.made_to_order !== 1 && product.stock === 0)}
+        >
+          今すぐ買う
         </button>
       </div>
     </div>

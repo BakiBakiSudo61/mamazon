@@ -6,3 +6,19 @@
 .skeleton { aspect-ratio: 3/4; background: var(--surface-2); border-radius: var(--radius-lg); animation: pulse 1.5s ease-in-out infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
 .empty { color: var(--text-muted); padding: 3rem 0; }
+
+@media (max-width: 640px) {
+  .inner { padding: 0 0 2rem; gap: 0; }
+  .title {
+    font-size: 0.9rem;
+    font-weight: 400;
+    padding: 0.75rem 0.9rem;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    gap: 0.4rem;
+  }
+  .title .count { font-size: 0.8rem; }
+  .grid { grid-template-columns: 1fr; gap: 0; background: #fff; }
+  .skeleton { aspect-ratio: auto; height: 170px; border-radius: 0; border-bottom: 1px solid var(--border); }
+  .empty { padding: 3rem 1rem; text-align: center; }
+}
