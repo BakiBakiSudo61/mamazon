@@ -1,0 +1,73 @@
+.wrap { display: flex; flex-direction: column; gap: 0.55rem; }
+.disabled { opacity: 0.55; pointer-events: none; }
+
+.top { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--f-muted); }
+.hint { font-size: 0.75rem; color: var(--f-faint); font-variant-numeric: tabular-nums; }
+.hintWarn { color: var(--f-red); font-weight: 600; }
+
+.field {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--f-surface-2);
+  border: 1px solid var(--f-border);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.field:focus-within { border-color: rgba(245, 196, 81, 0.5); box-shadow: 0 0 0 3px rgba(245, 196, 81, 0.12); }
+.fieldWarn { border-color: rgba(255, 93, 98, 0.5); }
+
+.inputWrap { flex: 1; display: flex; align-items: center; min-width: 0; padding: 0 0.5rem; cursor: text; }
+.yen { color: var(--f-muted); font-weight: 600; margin-right: 0.2rem; }
+.input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 44px;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--f-text) !important;
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  padding: 0;
+}
+
+.adj {
+  flex-shrink: 0;
+  min-width: 46px;
+  border: none;
+  border-radius: 10px;
+  background: var(--f-surface-3);
+  color: var(--f-text);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.adj:hover { background: #2a2f3e; }
+.adj:active { transform: scale(0.95); }
+.max { color: var(--f-gold); }
+
+.chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: 1 0 auto;
+  min-height: 34px;
+  padding: 0 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--f-border-strong);
+  background: transparent;
+  color: var(--f-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chip:hover { color: var(--f-text); border-color: rgba(255, 255, 255, 0.28); }
+.chipActive { background: rgba(245, 196, 81, 0.14); border-color: rgba(245, 196, 81, 0.55); color: var(--f-gold); }

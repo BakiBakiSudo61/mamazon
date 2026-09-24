@@ -1,16 +1,38 @@
 import { useState } from 'react';
+import { Loader } from 'lucide-react';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
-import styles from './CasinoGames.module.css';
+import { useUIStore } from '../../stores/uiStore';
+import { GameHeader } from '../../components/finance/ui/GameHeader';
+import { BetSelector } from '../../components/finance/ui/BetSelector';
+import { PlayingCard } from '../../components/finance/ui/PlayingCard';
+import { ResultBanner } from '../../components/finance/ui/ResultBanner';
+import kit from '../../components/finance/ui/kit.module.css';
+import styles from './CasinoBlackjack.module.css';
 
-const CARD_NAMES: Record<number, string> = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' };
 const SUITS = ['♠', '♥', '♦', '♣'];
-const cardLabel = (n: number) => CARD_NAMES[n] || String(n);
 const cardSuit = (n: number, i: number) => SUITS[(n + i) % 4];
-const cardVal = (n: number) => n > 10 ? 10 : n;
+const cardVal = (n: number) => (n > 10 ? 10 : n);
+
+type BjResponse = {
+  hand: number[];
+  dealerHand?: number[];
+  dealerFull?: number[];
+  playerTotal: number;
+  done: boolean;
+  result?: string;
+  payout?: number;
+};
+
+const handSum = (cards: number[]) => {
+  let s = cards.filter((c) => c > 0).reduce((a, c) => a + cardVal(c), 0);
+  if (cards.includes(1) && s + 10 <= 21) s += 10;
+  return s;
+};
 
 export function CasinoBlackjack() {
-  const refreshBalance = useAuthStore((s) => s.fetchMe);
+  const { user, fetchMe } = useAuthStore();
+  const addToast = useUIStore((s) => s.addToast);
   const [amount, setAmount] = useState(1000);
   const [hand, setHand] = useState<number[]>([]);
   const [dealerHand, setDealerHand] = useState<number[]>([]);
@@ -18,54 +40,60 @@ export function CasinoBlackjack() {
   const [playerTotal, setPlayerTotal] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ type: string; payout: number } | null>(null);
+  const [result, setResult] = useState<{ type: string; payout: number; bet: number } | null>(null);
+  const [round, setRound] = useState(0);
+
+  const balance = Number(user?.finance_balance ?? 0);
+  const fail = (err: unknown) => addToast({ type: 'error', message: err instanceof Error ? err.message : 'エラーが発生しました' });
 
   const start = async () => {
+    if (amount > balance) return;
     setLoading(true);
     setResult(null);
     try {
-      const res = await api.post<any>('/finance/gamble/blackjack', { action: 'start', amount });
+      const res = await api.post<BjResponse>('/finance/gamble/blackjack', { action: 'start', amount });
+      setRound((r) => r + 1);
       setHand(res.hand);
-      setDealerHand(res.dealerHand);
-      setDealerFull(res.dealerFull || res.dealerHand);
+      setDealerHand(res.dealerHand ?? []);
+      setDealerFull(res.dealerFull || res.dealerHand || []);
       setPlayerTotal(res.playerTotal);
       if (res.done) {
-        setResult({ type: res.result, payout: res.payout });
-        setDealerHand(res.dealerHand);
-        refreshBalance();
+        setResult({ type: res.result ?? 'lose', payout: res.payout ?? 0, bet: amount });
+        fetchMe();
       } else {
         setPlaying(true);
+        fetchMe();
       }
-    } catch { }
+    } catch (err) { fail(err); }
     setLoading(false);
   };
 
   const hit = async () => {
     setLoading(true);
     try {
-      const res = await api.post<any>('/finance/gamble/blackjack', { action: 'hit', amount, hand, dealerHand: dealerFull });
+      const res = await api.post<BjResponse>('/finance/gamble/blackjack', { action: 'hit', amount, hand, dealerHand: dealerFull });
       setHand(res.hand);
       setPlayerTotal(res.playerTotal);
       if (res.done) {
-        setResult({ type: res.result, payout: res.payout });
+        setResult({ type: res.result ?? 'bust', payout: res.payout ?? 0, bet: amount });
         if (res.dealerHand) setDealerHand(res.dealerHand);
         setPlaying(false);
-        refreshBalance();
+        fetchMe();
       }
-    } catch { }
+    } catch (err) { fail(err); }
     setLoading(false);
   };
 
   const stand = async () => {
     setLoading(true);
     try {
-      const res = await api.post<any>('/finance/gamble/blackjack', { action: 'stand', amount, hand, dealerHand: dealerFull });
-      setDealerHand(res.dealerHand);
+      const res = await api.post<BjResponse>('/finance/gamble/blackjack', { action: 'stand', amount, hand, dealerHand: dealerFull });
+      setDealerHand(res.dealerHand ?? []);
       setPlayerTotal(res.playerTotal);
-      setResult({ type: res.result, payout: res.payout });
+      setResult({ type: res.result ?? 'lose', payout: res.payout ?? 0, bet: amount });
       setPlaying(false);
-      refreshBalance();
-    } catch { }
+      fetchMe();
+    } catch (err) { fail(err); }
     setLoading(false);
   };
 
@@ -74,85 +102,82 @@ export function CasinoBlackjack() {
     setPlayerTotal(0); setPlaying(false); setResult(null);
   };
 
-  const renderCard = (n: number, i: number) => {
-    if (n === 0) return <div key={i} className={`${styles.card} ${styles.cardBack}`}>🂠</div>;
-    const suit = cardSuit(n, i);
-    const isRed = suit === '♥' || suit === '♦';
-    return (
-      <div key={i} className={`${styles.card} ${isRed ? styles.cardRed : ''}`}>
-        <span className={styles.cardRank}>{cardLabel(n)}</span>
-        <span className={styles.cardSuit}>{suit}</span>
-      </div>
-    );
-  };
-
-  const handSum = (cards: number[]) => {
-    let s = cards.filter(c => c > 0).reduce((a, c) => a + cardVal(c), 0);
-    if (cards.includes(1) && s + 10 <= 21) s += 10;
-    return s;
-  };
+  const dealerShown = dealerHand.length > 0 ? handSum(dealerHand) : 0;
+  const dealerHidden = dealerHand.includes(0);
+  const won = result && (result.type === 'win' || result.type === 'blackjack');
 
   return (
-    <div className={styles.gamePage}>
-      <h2 className={styles.gameTitle}>♠️ ブラックジャック</h2>
+    <div className={kit.game}>
+      <GameHeader icon="♠️" title="ブラックジャック" desc="21を超えずにディーラーより21に近づけば勝ち。ブラックジャックは2.5倍。" />
 
-      <div className={styles.bjTable}>
-        {/* Dealer */}
-        <div className={styles.bjSection}>
-          <h3>ディーラー {dealerHand.length > 0 && !playing && result ? `(${handSum(dealerHand)})` : ''}</h3>
-          <div className={styles.bjCards}>
-            {dealerHand.map((c, i) => renderCard(c, i))}
+      <section className={styles.table}>
+        <div className={styles.side}>
+          <div className={styles.sideHead}>
+            <span className={styles.who}>DEALER</span>
+            {dealerHand.length > 0 && <span className={styles.total}>{dealerShown}{dealerHidden ? '+?' : ''}</span>}
+          </div>
+          <div className={styles.cards}>
+            {dealerHand.length === 0
+              ? <div className={styles.slot} />
+              : dealerHand.map((c, i) => (
+                <PlayingCard key={`${round}-d${i}`} rank={c || 1} suit={cardSuit(c, i)} faceDown={c === 0} deal dealDelay={i * 0.12 + 0.06} size="md" />
+              ))}
           </div>
         </div>
 
-        {/* Result */}
-        {result && (
-          <div className={`${styles.resultBanner} ${result.type === 'win' || result.type === 'blackjack' ? styles.resultWin : result.type === 'push' ? styles.resultPush : styles.resultLose}`}>
-            {result.type === 'blackjack' ? `🃏 BLACKJACK! +${result.payout.toLocaleString()}` :
-             result.type === 'win' ? `🎉 WIN! +${result.payout.toLocaleString()}` :
-             result.type === 'push' ? `🤝 PUSH (引き分け)` :
-             result.type === 'bust' ? `💥 BUST!` : `😢 LOSE`}
-          </div>
-        )}
+        <div className={styles.felt} aria-hidden="true">
+          <span>BLACKJACK PAYS 5 TO 2</span>
+          <small>Dealer stands on 17</small>
+        </div>
 
-        {/* Player */}
-        <div className={styles.bjSection}>
-          <h3>あなた {hand.length > 0 ? `(${playerTotal})` : ''}</h3>
-          <div className={styles.bjCards}>
-            {hand.map((c, i) => renderCard(c, i))}
+        <div className={styles.side}>
+          <div className={styles.cards}>
+            {hand.length === 0
+              ? <div className={styles.slot} />
+              : hand.map((c, i) => (
+                <PlayingCard key={`${round}-p${i}`} rank={c} suit={cardSuit(c, i)} deal dealDelay={i < 2 ? i * 0.12 : 0} size="md" />
+              ))}
+          </div>
+          <div className={styles.sideHead}>
+            <span className={styles.who}>YOU</span>
+            {hand.length > 0 && (
+              <span className={`${styles.total} ${playerTotal > 21 ? styles.totalBust : playerTotal === 21 ? styles.total21 : ''}`}>{playerTotal}</span>
+            )}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Controls */}
-      <div className={styles.betSection}>
-        {!playing && !result && (
+      {result && (
+        won
+          ? <ResultBanner kind="win" big={result.type === 'blackjack'} title={result.type === 'blackjack' ? 'BLACKJACK!' : 'WIN'} sub={`払戻 ¥${result.payout.toLocaleString()}`} amount={result.payout - result.bet} />
+          : result.type === 'push'
+            ? <ResultBanner kind="push" title="PUSH" sub="引き分け — 賭け金を返却" amount={0} />
+            : <ResultBanner kind="lose" title={result.type === 'bust' ? 'BUST' : 'LOSE'} sub={result.type === 'bust' ? '21を超えました' : 'ディーラーの勝ち'} amount={-result.bet} />
+      )}
+
+      <section className={`${kit.panel} ${styles.controls}`}>
+        {playing ? (
+          <div className={styles.actions}>
+            <button className={`${kit.success} ${styles.act}`} onClick={hit} disabled={loading}>
+              {loading ? <Loader size={18} className={kit.spinner} /> : <>HIT<small>もう1枚</small></>}
+            </button>
+            <button className={`${kit.danger} ${styles.act}`} onClick={stand} disabled={loading}>
+              {loading ? <Loader size={18} className={kit.spinner} /> : <>STAND<small>勝負</small></>}
+            </button>
+          </div>
+        ) : (
           <>
-            <div className={styles.betRow}>
-              <label>ベット額</label>
-              <div className={styles.amountBtns}>
-                {[500, 1000, 5000, 10000, 50000].map((v) => (
-                  <button key={v} className={`${styles.amountBtn} ${amount === v ? styles.amountActive : ''}`} onClick={() => setAmount(v)}>
-                    {v.toLocaleString()}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <button className={styles.spinBtn} onClick={start} disabled={loading}>DEAL</button>
+            <BetSelector value={amount} onChange={setAmount} presets={[500, 1000, 5000, 10000, 50000]} disabled={loading} />
+            <button
+              className={`${kit.primary} ${kit.block}`}
+              onClick={() => { if (result) reset(); start(); }}
+              disabled={loading || amount > balance}
+            >
+              {loading ? <Loader size={18} className={kit.spinner} /> : result ? 'もう一度 DEAL' : 'DEAL'}
+            </button>
           </>
         )}
-
-        {playing && (
-          <div className={styles.bjActions}>
-            <button className={styles.hitBtn} onClick={hit} disabled={loading}>HIT</button>
-            <button className={styles.standBtn} onClick={stand} disabled={loading}>STAND</button>
-          </div>
-        )}
-
-        {result && (
-          <button className={styles.spinBtn} onClick={reset}>もう一度プレイ</button>
-        )}
-      </div>
+      </section>
     </div>
   );
 }

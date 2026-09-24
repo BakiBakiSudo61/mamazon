@@ -1,0 +1,124 @@
+/* ===== Finance design tokens (inherited by every finance screen) ===== */
+.shell {
+  --f-bg: #07080c;
+  --f-surface: #10121a;
+  --f-surface-2: #171a24;
+  --f-surface-3: #1f2330;
+  --f-border: rgba(255, 255, 255, 0.07);
+  --f-border-strong: rgba(255, 255, 255, 0.14);
+  --f-text: #f3f4f7;
+  --f-muted: #8a8fa0;
+  --f-faint: #5b6070;
+  --f-gold: #f5c451;
+  --f-gold-deep: #e39a1c;
+  --f-gold-grad: linear-gradient(180deg, #ffd976 0%, #f2a93b 100%);
+  --f-green: #2ed17f;
+  --f-red: #ff5d62;
+  --f-blue: #5b8cff;
+  --f-violet: #9b7bff;
+  --f-radius: 18px;
+  --f-radius-sm: 12px;
+  --f-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 12px 32px rgba(0, 0, 0, 0.35);
+  --f-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--f-bg);
+  color: var(--f-text);
+  font-family: 'Inter', system-ui, -apple-system, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  isolation: isolate;
+}
+
+.shell :where(button) { font-family: inherit; }
+.shell :where(input) { font-family: inherit; }
+
+.glow {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 520px;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(60% 70% at 50% -10%, var(--tone-a) 0%, transparent 70%),
+    radial-gradient(40% 50% at 85% 0%, var(--tone-b) 0%, transparent 70%);
+}
+.gold   { --tone-a: rgba(245, 180, 60, 0.16); --tone-b: rgba(155, 123, 255, 0.10); }
+.violet { --tone-a: rgba(140, 90, 255, 0.20); --tone-b: rgba(245, 180, 60, 0.10); }
+.green  { --tone-a: rgba(46, 209, 127, 0.14); --tone-b: rgba(91, 140, 255, 0.10); }
+
+/* ===== Header ===== */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  padding: calc(0.6rem + env(safe-area-inset-top, 0px)) max(1rem, env(safe-area-inset-right, 0px)) 0.6rem max(1rem, env(safe-area-inset-left, 0px));
+  background: rgba(7, 8, 12, 0.72);
+  backdrop-filter: saturate(160%) blur(18px);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+  border-bottom: 1px solid var(--f-border);
+}
+
+.back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  height: 36px;
+  padding: 0 0.75rem 0 0.4rem;
+  border-radius: 999px;
+  color: var(--f-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+.back:hover { color: var(--f-text); background: rgba(255, 255, 255, 0.06); }
+
+.title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.balance {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 34px;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  background: rgba(245, 196, 81, 0.1);
+  border: 1px solid rgba(245, 196, 81, 0.28);
+  color: var(--f-gold);
+  font-weight: 700;
+  font-size: 0.88rem;
+  transition: background 0.3s, border-color 0.3s, color 0.3s, transform 0.3s var(--f-ease);
+}
+.flashUp { background: rgba(46, 209, 127, 0.16); border-color: rgba(46, 209, 127, 0.5); color: var(--f-green); transform: scale(1.06); }
+.flashDown { background: rgba(255, 93, 98, 0.14); border-color: rgba(255, 93, 98, 0.45); color: var(--f-red); }
+
+.main {
+  position: relative;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem calc(3rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 600px) {
+  .header { padding-left: 0.5rem; padding-right: 0.75rem; }
+  .backLabel { display: none; }
+  .back { width: 36px; padding: 0; justify-content: center; }
+  .balance { font-size: 0.82rem; padding: 0 0.7rem; }
+  .main { padding: 1rem 0.75rem calc(2.5rem + env(safe-area-inset-bottom, 0px)); }
+}
