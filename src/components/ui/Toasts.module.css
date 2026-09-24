@@ -43,3 +43,19 @@
   padding: 0;
 }
 .close:hover { color: var(--text); }
+
+@media (max-width: 640px) {
+  .container {
+    top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+    bottom: auto;
+    left: 0.75rem;
+    right: 0.75rem;
+    align-items: stretch;
+  }
+  .toast { min-width: 0; max-width: none; animation-name: dropIn; }
+}
+
+@keyframes dropIn {
+  from { transform: translateY(-16px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}

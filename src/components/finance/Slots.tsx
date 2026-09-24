@@ -1,186 +1,176 @@
-﻿import { useState, useRef, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
+import { useUIStore } from '../../stores/uiStore';
+import { GameHeader } from './ui/GameHeader';
+import { BetSelector } from './ui/BetSelector';
+import { ResultBanner } from './ui/ResultBanner';
+import kit from './ui/kit.module.css';
 import styles from './Slots.module.css';
 
 const SYMBOLS = ['🍎', '🍇', '🍒', '🔔', '💎', '7️⃣'];
-const BET_PRESETS = [100, 500, 1000, 5000];
+const rnd = () => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+const randomCol = () => [rnd(), rnd(), rnd()];
 
-function rnd() { return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]; }
-function randomCol(): string[] { return [rnd(), rnd(), rnd()]; }
+type SpinResult = { reels: string[]; multiplier: number; payout: number };
 
 export function Slots() {
   const { user, fetchMe } = useAuthStore();
-  const [betAmount, setBetAmount] = useState(100);
-  // 3 reels (columns), each with [top, mid, bottom]
+  const addToast = useUIStore((s) => s.addToast);
+  const [bet, setBet] = useState(100);
   const [reels, setReels] = useState<string[][]>([
     ['🍇', '🍒', '🔔'],
-    ['💎', '🍒', '🍎'],
+    ['💎', '7️⃣', '🍎'],
     ['🔔', '🍒', '🍇'],
   ]);
   const [stopped, setStopped] = useState([true, true, true]);
   const [spinning, setSpinning] = useState(false);
   const [resultReady, setResultReady] = useState(false);
-  const [multiplier, setMultiplier] = useState<number | null>(null);
-  const [payout, setPayout] = useState<number | null>(null);
+  const [outcome, setOutcome] = useState<(SpinResult & { bet: number }) | null>(null);
 
   const stoppedRef = useRef([true, true, true]);
-  const pendingRef = useRef<{ reels: string[]; multiplier: number; payout: number } | null>(null);
-  const spinIntervalsRef = useRef<(ReturnType<typeof setInterval> | null)[]>([null, null, null]);
-  const autoTimersRef = useRef<(ReturnType<typeof setTimeout> | null)[]>([null, null, null]);
+  const pendingRef = useRef<SpinResult | null>(null);
+  const betRef = useRef(bet);
+  const autoTimers = useRef<(ReturnType<typeof setTimeout> | null)[]>([null, null, null]);
 
-  useEffect(() => {
-    return () => {
-      spinIntervalsRef.current.forEach(id => id != null && clearInterval(id));
-      autoTimersRef.current.forEach(id => id != null && clearTimeout(id));
-    };
-  }, []);
+  // long symbol strips for the spinning animation (stable per mount)
+  const strips = useMemo(() => [0, 1, 2].map(() => Array.from({ length: 12 }, rnd)), []);
 
-  const startColSpin = (ri: number) => {
-    if (spinIntervalsRef.current[ri] != null) clearInterval(spinIntervalsRef.current[ri]!);
-    spinIntervalsRef.current[ri] = setInterval(() => {
-      setReels(prev => {
-        const next = [...prev];
-        next[ri] = randomCol();
-        return next;
-      });
-    }, 80);
-  };
+  useEffect(() => () => autoTimers.current.forEach((t) => t && clearTimeout(t)), []);
+
+  const balance = Number(user?.finance_balance ?? 0);
 
   const stopCol = (ri: number) => {
-    if (stoppedRef.current[ri]) return;
-    if (spinIntervalsRef.current[ri] != null) { clearInterval(spinIntervalsRef.current[ri]!); spinIntervalsRef.current[ri] = null; }
-    if (autoTimersRef.current[ri] != null) { clearTimeout(autoTimersRef.current[ri]!); autoTimersRef.current[ri] = null; }
+    const res = pendingRef.current;
+    if (stoppedRef.current[ri] || !res) return;
+    if (autoTimers.current[ri]) { clearTimeout(autoTimers.current[ri]!); autoTimers.current[ri] = null; }
 
-    const result = pendingRef.current;
-    const mid = result ? result.reels[ri] : rnd();
-    setReels(prev => { const next = [...prev]; next[ri] = [rnd(), mid, rnd()]; return next; });
-
+    setReels((prev) => { const next = [...prev]; next[ri] = [rnd(), res.reels[ri], rnd()]; return next; });
     stoppedRef.current[ri] = true;
     setStopped([...stoppedRef.current]);
 
-    if (stoppedRef.current.every(v => v) && result) {
-      setMultiplier(result.multiplier);
-      setPayout(result.payout);
-      setSpinning(false);
-      setResultReady(false);
-      fetchMe();
+    if (stoppedRef.current.every(Boolean)) {
       pendingRef.current = null;
+      setTimeout(() => {
+        setOutcome({ ...res, bet: betRef.current });
+        setSpinning(false);
+        setResultReady(false);
+        fetchMe();
+      }, 380);
     }
   };
 
   const spin = async () => {
-    const bal = user?.finance_balance ?? 0;
-    if (betAmount <= 0 || betAmount > bal || spinning) return;
-
+    if (bet <= 0 || bet > balance || spinning) return;
+    betRef.current = bet;
     stoppedRef.current = [false, false, false];
     setStopped([false, false, false]);
     setSpinning(true);
     setResultReady(false);
-    setMultiplier(null);
-    setPayout(null);
+    setOutcome(null);
     pendingRef.current = null;
-
-    autoTimersRef.current.forEach(id => id != null && clearTimeout(id));
-    [0, 1, 2].forEach(ri => startColSpin(ri));
+    autoTimers.current.forEach((t) => t && clearTimeout(t));
 
     try {
-      const res = await api.post<{ reels: string[]; multiplier: number; payout: number }>(
-        '/finance/gamble/slots', { amount: betAmount }
-      );
+      const res = await api.post<SpinResult>('/finance/gamble/slots', { amount: bet });
       pendingRef.current = res;
       setResultReady(true);
-      // auto-stop safety net: only fires if user hasn't stopped manually (8s / 10s / 12s)
-      [0, 1, 2].forEach(ri => {
-        autoTimersRef.current[ri] = setTimeout(() => stopCol(ri), 8000 + ri * 2000);
+      // safety net: reels stop by themselves if the player doesn't
+      [0, 1, 2].forEach((ri) => {
+        autoTimers.current[ri] = setTimeout(() => stopCol(ri), 6000 + ri * 1200);
       });
-    } catch {
-      spinIntervalsRef.current.forEach(id => id != null && clearInterval(id));
+    } catch (err) {
       stoppedRef.current = [true, true, true];
       setStopped([true, true, true]);
+      setReels((r) => r.map((c) => (c.length ? c : randomCol())));
       setSpinning(false);
+      addToast({ type: 'error', message: err instanceof Error ? err.message : 'エラーが発生しました' });
     }
   };
 
-  const allStopped = stopped.every(v => v);
+  const stopNext = () => {
+    const i = stoppedRef.current.findIndex((s) => !s);
+    if (i >= 0) stopCol(i);
+  };
+
+  const won = outcome && outcome.multiplier > 0;
+  const mid = reels.map((c) => c[1]);
+  const hit = (ri: number) => !!won && mid.filter((s) => s === mid[ri]).length >= 2;
 
   return (
-    <div className={styles.game}>
-      <h2 className={styles.title}>🎰 Mamazon スロット</h2>
-      <p className={styles.desc}>中段ライン3つ揃えで大当たり！ボタンで自分で止められる</p>
+    <div className={kit.game}>
+      <GameHeader icon="🎰" title="スロット" desc="中段ラインに揃えば当たり。STOPで1リールずつ自分で止められます。" />
 
-      <div className={styles.machine}>
-        <div className={styles.machineTopLight} />
-
-        <div className={styles.reelWindow}>
-          {[0, 1, 2].map(ri => (
-            <div key={ri} className={styles.reelCol}>
-              {[0, 1, 2].map(row => (
-                <div
-                  key={row}
-                  className={`${styles.reelCell} ${!stopped[ri] ? styles.reelSpin : ''} ${row === 1 ? styles.paylineCell : ''}`}
-                  style={!stopped[ri] ? { animationDelay: `${ri * 0.07}s` } : {}}
-                >
-                  <span className={styles.reelSymbol}>{reels[ri][row]}</span>
-                </div>
-              ))}
-            </div>
-          ))}
+      <section className={`${styles.machine} ${won ? styles.machineWin : ''} ${outcome && outcome.multiplier >= 20 ? styles.machineJackpot : ''}`}>
+        <div className={styles.marquee}>
+          <span className={styles.marqueeDot} /><span className={styles.marqueeText}>MAMAZON SLOTS</span><span className={styles.marqueeDot} />
         </div>
-
-        <div className={styles.paylineLine} />
-        <div className={styles.machineScrews}>
-          <div className={styles.screw} /><div className={styles.screw} />
-        </div>
-      </div>
-
-      {/* Stop buttons */}
-      {spinning && (
-        <div className={styles.stopBtns}>
-          {[0, 1, 2].map(ri => (
+        <div className={styles.window}>
+          {[0, 1, 2].map((ri) => (
             <button
               key={ri}
-              className={`${styles.stopBtn} ${stopped[ri] ? styles.stopBtnDone : ''}`}
+              type="button"
+              className={styles.reel}
               onClick={() => stopCol(ri)}
               disabled={stopped[ri] || !resultReady}
+              aria-label={`リール${ri + 1}を止める`}
             >
-              {stopped[ri] ? '✓ 停止' : resultReady ? '■ STOP' : '···'}
+              {!stopped[ri] ? (
+                <div className={styles.strip} style={{ animationDuration: `${0.32 + ri * 0.04}s` }}>
+                  {[...strips[ri], ...strips[ri]].map((s, i) => <span key={i} className={styles.cell}>{s}</span>)}
+                </div>
+              ) : (
+                <div className={`${styles.stack} ${spinning || outcome ? styles.settle : ''}`}>
+                  {reels[ri].map((s, row) => (
+                    <span key={row} className={`${styles.cell} ${row === 1 && hit(ri) ? styles.cellHit : ''}`}>{s}</span>
+                  ))}
+                </div>
+              )}
+            </button>
+          ))}
+          <div className={styles.payline} aria-hidden="true" />
+          <div className={styles.shadeTop} aria-hidden="true" />
+          <div className={styles.shadeBottom} aria-hidden="true" />
+        </div>
+
+        <div className={styles.stops}>
+          {[0, 1, 2].map((ri) => (
+            <button
+              key={ri}
+              className={`${styles.stopBtn} ${stopped[ri] ? styles.stopDone : ''} ${spinning && resultReady && !stopped[ri] ? styles.stopLive : ''}`}
+              onClick={() => stopCol(ri)}
+              disabled={!spinning || stopped[ri] || !resultReady}
+            >
+              STOP
             </button>
           ))}
         </div>
+      </section>
+
+      {outcome && !spinning && (
+        won
+          ? <ResultBanner kind="win" big={outcome.multiplier >= 20} title={`${outcome.multiplier}倍 HIT!`} sub={`払戻 ¥${outcome.payout.toLocaleString()}`} amount={outcome.payout - outcome.bet} />
+          : <ResultBanner kind="lose" title="ハズレ" sub="もう一度回してみよう" amount={-outcome.bet} />
       )}
 
-      {/* Result */}
-      {multiplier !== null && allStopped && !spinning && (
-        <div className={`${styles.result} ${multiplier > 0 ? styles.win : styles.lose}`}>
-          {multiplier > 0 ? `🏆 ${multiplier}倍！ +¥${payout?.toLocaleString()}` : '💸 ハズレ...'}
+      <section className={`${kit.panel} ${styles.controls}`}>
+        <div className={styles.pays}>
+          <span><em>7️⃣7️⃣7️⃣</em><b className={styles.gold}>×50</b></span>
+          <span><em>💎💎💎</em><b className={styles.silver}>×20</b></span>
+          <span><em>同じ絵柄×3</em><b>×10</b></span>
+          <span><em>同じ絵柄×2</em><b>×2</b></span>
         </div>
-      )}
-
-      <div className={styles.payTable}>
-        <span className={styles.payEntry}><span className={styles.payEmoji}>7️⃣</span>×3 = <strong className={styles.goldText}>50x</strong></span>
-        <span className={styles.payEntry}><span className={styles.payEmoji}>💎</span>×3 = <strong className={styles.silverText}>20x</strong></span>
-        <span className={styles.payEntry}>同×3 = <strong>10x</strong></span>
-        <span className={styles.payEntry}>同×2 = <strong>2x</strong></span>
-      </div>
-
-      <div className={styles.chips}>
-        {BET_PRESETS.map(v => (
-          <button key={v} className={`${styles.chip} ${betAmount === v ? styles.chipActive : ''}`}
-            onClick={() => setBetAmount(v)} disabled={spinning}>
-            ¥{v.toLocaleString()}
+        <BetSelector value={bet} onChange={setBet} disabled={spinning} />
+        {spinning ? (
+          <button className={`${kit.secondary} ${kit.block}`} onClick={stopNext} disabled={!resultReady}>
+            {resultReady ? '次のリールを止める' : '回転中…'}
           </button>
-        ))}
-        <input type="number" min="1" value={betAmount}
-          onChange={e => setBetAmount(Number(e.target.value))}
-          className={styles.betInput} disabled={spinning} />
-      </div>
-
-      <button className={styles.spinBtn} onClick={spin} disabled={spinning}>
-        {spinning ? '🎰 スピン中...' : '🎰 SPIN！'}
-      </button>
-
-      <p className={styles.balanceNote}>残高: ¥{(user?.finance_balance ?? 0).toLocaleString()}</p>
+        ) : (
+          <button className={`${kit.primary} ${kit.block}`} onClick={spin} disabled={bet > balance}>
+            SPIN
+          </button>
+        )}
+      </section>
     </div>
   );
 }

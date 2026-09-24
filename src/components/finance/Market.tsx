@@ -1,39 +1,20 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
+import { ChevronDown, Minus, Plus, Loader, Flame, Zap } from 'lucide-react';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { useUIStore } from '../../stores/uiStore';
+import { AnimatedNumber } from './ui/AnimatedNumber';
+import kit from './ui/kit.module.css';
 import styles from './Market.module.css';
 
 const HIST_KEY = 'mamazon_mkt_hist';
 const MAX_HIST = 120;
 
-// Color map for fallback avatars when image is not provided
 const ASSET_COLORS: Record<string, string> = {
-  MMZN: '#FF9900', PEAR: '#a8d8a8', MCHD: '#00adef', GOGL: '#4285f4',
+  MMZN: '#FF9900', PEAR: '#8fcf8f', MCHD: '#00adef', GOGL: '#4285f4',
   NVDX: '#76b900', BTK: '#f7931a', ETB: '#627eea', SLC: '#9945ff',
   DMC: '#c3a634', MMC: '#e94560', PPC: '#4caf50',
 };
-
-function AssetLogo({ id, type }: { id: string; type: string }) {
-  const [hasImg, setHasImg] = useState(true);
-  const fallbackBg = ASSET_COLORS[id] || (type === 'crypto' ? '#7c3aed' : '#1e40af');
-  return (
-    <div className={styles.assetLogoWrap}>
-      {hasImg ? (
-        <img
-          src={`/assets/market/${id}.png`}
-          alt={id}
-          className={styles.assetLogo}
-          onError={() => setHasImg(false)}
-        />
-      ) : (
-        <div className={styles.assetLogoFallback} style={{ background: fallbackBg }}>
-          {id.charAt(0)}
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface Asset {
   id: string;
@@ -49,83 +30,108 @@ interface PortfolioItem {
   avg_buy_price: number;
 }
 
-function Sparkline({ data, isUp }: { data: number[]; isUp: boolean }) {
-  if (data.length < 2) return <div className={styles.sparklinePlaceholder} />;
+type Filter = 'all' | 'stock' | 'crypto' | 'owned';
+
+function loadHistory(): Record<string, number[]> {
+  try {
+    const saved = localStorage.getItem(HIST_KEY);
+    return saved ? (JSON.parse(saved) as Record<string, number[]>) : {};
+  } catch {
+    return {};
+  }
+}
+
+// Mirrors the server: slippage 2% (>=10) / 5% (>=50), then a 3% fee
+function buyCost(price: number, q: number) {
+  const base = price * q;
+  const slip = Math.floor(base * (q >= 50 ? 0.05 : q >= 10 ? 0.02 : 0));
+  return base + slip + Math.floor((base + slip) * 0.03);
+}
+function maxBuy(cash: number, price: number) {
+  if (!price) return 0;
+  let q = Math.floor(cash / (price * 1.03));
+  while (q > 0 && buyCost(price, q) > cash) q--;
+  return q;
+}
+
+const yen = (n: number) => `¥${Math.round(n).toLocaleString()}`;
+const pct = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
+
+function AssetLogo({ id, type }: { id: string; type: string }) {
+  const [hasImg, setHasImg] = useState(true);
+  const c = ASSET_COLORS[id] || (type === 'crypto' ? '#7c3aed' : '#1e40af');
+  return hasImg ? (
+    <img src={`/assets/market/${id}.png`} alt="" className={styles.logo} onError={() => setHasImg(false)} />
+  ) : (
+    <span className={styles.logo} style={{ background: `linear-gradient(145deg, ${c}, color-mix(in srgb, ${c} 55%, #000))` }}>
+      {id.slice(0, 2)}
+    </span>
+  );
+}
+
+function Sparkline({ data, up, big }: { data: number[]; up: boolean; big?: boolean }) {
+  const id = `sp${useId().replace(/:/g, '')}`;
+  if (data.length < 2) return <div className={big ? styles.chartEmpty : styles.sparkEmpty} />;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
-  const pts = data
-    .map((v, i) => {
-      const x = (i / (data.length - 1)) * 100;
-      const y = 30 - 2 - ((v - min) / range) * 26;
-      return `${x},${y}`;
-    })
-    .join(' ');
-  const color = isUp ? '#34d399' : '#f87171';
-  const gradId = `sg-${isUp ? 'up' : 'dn'}`;
+  const H = big ? 100 : 30;
+  const pts = data.map((v, i) => [(i / (data.length - 1)) * 100, H - 3 - ((v - min) / range) * (H - 6)]);
+  const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
+  const color = up ? '#2ed17f' : '#ff5d62';
   return (
-    <svg viewBox="0 0 100 30" preserveAspectRatio="none" className={styles.sparkline}>
+    <svg viewBox={`0 0 100 ${H}`} preserveAspectRatio="none" className={big ? styles.chart : styles.spark} aria-hidden="true">
       <defs>
-        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={big ? 0.3 : 0.2} />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <polyline
-        points={pts}
-        fill="none"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        vectorEffect="non-scaling-stroke"
-      />
+      <path d={`${line} L100,${H} L0,${H} Z`} fill={`url(#${id})`} />
+      <path d={line} fill="none" stroke={color} strokeWidth={big ? 2 : 1.5} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }
 
 export function Market() {
-  const { fetchMe } = useAuthStore();
+  const { user, fetchMe } = useAuthStore();
+  const addToast = useUIStore((s) => s.addToast);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [halvingDaysLeft, setHalvingDaysLeft] = useState<Record<string, number>>({});
   const [prevPrices, setPrevPrices] = useState<Record<string, number>>({});
-  const [priceHistory, setPriceHistory] = useState<Record<string, number[]>>({});
+  const [priceHistory, setPriceHistory] = useState<Record<string, number[]>>(loadHistory);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
-  const [tradeAmounts, setTradeAmounts] = useState<Record<string, number>>({});
-  const [message, setMessage] = useState('');
+  const [qty, setQty] = useState<Record<string, number>>({});
+  const [open, setOpen] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>('all');
+  const [trading, setTrading] = useState<string | null>(null);
+  const [lastTrade, setLastTrade] = useState<{ id: string; text: string; ok: boolean } | null>(null);
+  const [tick, setTick] = useState(0);
   const prevPricesRef = useRef<Record<string, number>>({});
-  const priceHistoryRef = useRef<Record<string, number[]>>({});
+  const priceHistoryRef = useRef<Record<string, number[]>>(priceHistory);
 
-  // Load persisted history from localStorage on mount
-  useEffect(() => {
+  const fetchPortfolio = async () => {
     try {
-      const saved = localStorage.getItem(HIST_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as Record<string, number[]>;
-        priceHistoryRef.current = parsed;
-        setPriceHistory(parsed);
-      }
-    } catch { /* ignore */ }
+      setPortfolio(await api.get<PortfolioItem[]>('/finance/portfolio'));
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-    const init = async () => {
+  // Load assets and merge server history into the persisted one on mount
+  useEffect(() => {
+    (async () => {
       try {
         const [assetsRes, histRes] = await Promise.all([
           api.get<Asset[]>('/finance/market/assets'),
           api.get<Record<string, number[]>>('/finance/market/history'),
         ]);
         setAssets(assetsRes);
-        // Merge server history into local (server provides the past 60 points)
         const merged = { ...priceHistoryRef.current };
         Object.entries(histRes).forEach(([id, hist]) => {
-          // If we have local history, append server history points that may be newer
           const local = merged[id] || [];
-          if (local.length === 0) {
-            merged[id] = hist.slice(-MAX_HIST);
-          } else {
-            // Keep local history (which may have more recent points from polling)
-            merged[id] = [...hist, ...local].slice(-MAX_HIST);
-          }
+          merged[id] = local.length === 0 ? hist.slice(-MAX_HIST) : [...hist, ...local].slice(-MAX_HIST);
         });
         priceHistoryRef.current = merged;
         setPriceHistory({ ...merged });
@@ -134,8 +140,7 @@ export function Market() {
       } catch (err) {
         console.error(err);
       }
-    };
-    init();
+    })();
   }, []);
 
   // Price polling every 5 seconds
@@ -144,183 +149,204 @@ export function Market() {
       try {
         const res = await api.get<{ prices: Record<string, number>; halvingDaysLeft: Record<string, number> }>('/finance/market/prices');
         const p = res.prices;
-        // track history
         const newHist = { ...priceHistoryRef.current };
         Object.entries(p).forEach(([id, price]) => {
           newHist[id] = [...(newHist[id] || []).slice(-(MAX_HIST - 1)), price];
         });
         priceHistoryRef.current = newHist;
         setPriceHistory({ ...newHist });
-        // Persist to localStorage
         try { localStorage.setItem(HIST_KEY, JSON.stringify(newHist)); } catch { /* ignore */ }
         setPrevPrices({ ...prevPricesRef.current });
         prevPricesRef.current = p;
         setPrices(p);
         setHalvingDaysLeft(res.halvingDaysLeft);
+        setTick((t) => t + 1);
       } catch (err) {
         console.error(err);
       }
     };
     fetchPrices();
-    const interval = setInterval(fetchPrices, 5000); // every 5 seconds
+    const interval = setInterval(fetchPrices, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  const fetchPortfolio = async () => {
-    try {
-      const pf = await api.get<PortfolioItem[]>('/finance/portfolio');
-      setPortfolio(pf);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const handleTrade = async (assetId: string, action: 'buy' | 'sell') => {
-    const quantity = tradeAmounts[assetId] || 0;
+    const quantity = qty[assetId] || 0;
     if (quantity <= 0) return;
+    setTrading(`${assetId}:${action}`);
     try {
       const res = await api.post<{
         quantity: number; fee?: number; slippage?: number; tax?: number; earned?: number; totalCost?: number
       }>(`/finance/market/${action}`, { assetId, quantity });
 
-      if (action === 'buy') {
-        const parts = [`${res.quantity} ${assetId} を購入しました！`];
-        if (res.fee) parts.push(`手数料: ¥${res.fee.toLocaleString()}`);
-        if (res.slippage) parts.push(`スリッページ: ¥${res.slippage.toLocaleString()}`);
-        setMessage(parts.join(' / '));
-      } else {
-        const parts = [`${res.quantity} ${assetId} を売却しました！`];
-        if (res.fee) parts.push(`手数料: ¥${res.fee.toLocaleString()}`);
-        if (res.tax) parts.push(`税: ¥${res.tax.toLocaleString()}`);
-        if (res.earned) parts.push(`手取り: ¥${res.earned.toLocaleString()}`);
-        setMessage(parts.join(' / '));
-      }
-      setTradeAmounts({ ...tradeAmounts, [assetId]: 0 });
+      const parts = action === 'buy'
+        ? [`${res.quantity} ${assetId} を購入`, res.totalCost ? `支払 ${yen(res.totalCost)}` : '', res.fee ? `手数料 ${yen(res.fee)}` : '', res.slippage ? `スリッページ ${yen(res.slippage)}` : '']
+        : [`${res.quantity} ${assetId} を売却`, res.earned ? `受取 ${yen(res.earned)}` : '', res.fee ? `手数料 ${yen(res.fee)}` : '', res.tax ? `税 ${yen(res.tax)}` : ''];
+      const text = parts.filter(Boolean).join(' ・ ');
+      setLastTrade({ id: assetId, text, ok: true });
+      addToast({ type: 'success', message: text });
+      setQty({ ...qty, [assetId]: 0 });
       await fetchMe();
       await fetchPortfolio();
-      setTimeout(() => setMessage(''), 5000);
-    } catch (err: any) {
-      setMessage(`❌ ${err.message || 'エラーが発生しました'}`);
-      setTimeout(() => setMessage(''), 4000);
+    } catch (err) {
+      const text = err instanceof Error ? err.message : 'エラーが発生しました';
+      setLastTrade({ id: assetId, text, ok: false });
+      addToast({ type: 'error', message: text });
     }
+    setTrading(null);
   };
+
+  // ----- Derived values -----
+  const holdings = portfolio.map((p) => {
+    const price = prices[p.asset_id] || 0;
+    const value = price * p.quantity;
+    const cost = p.avg_buy_price * p.quantity;
+    return { ...p, price, value, cost, pl: value - cost };
+  });
+  const totalValue = holdings.reduce((a, h) => a + h.value, 0);
+  const totalCost = holdings.reduce((a, h) => a + h.cost, 0);
+  const totalPL = totalValue - totalCost;
+  const cash = Number(user?.finance_balance ?? 0);
+
+  const change = (id: string) => {
+    const h = priceHistory[id] || [];
+    const first = h[0] || prices[id] || 0;
+    const cur = prices[id] || h[h.length - 1] || 0;
+    return first ? ((cur - first) / first) * 100 : 0;
+  };
+
+  const shown = assets.filter((a) =>
+    filter === 'all' ? true : filter === 'owned' ? portfolio.some((p) => p.asset_id === a.id) : a.type === filter,
+  );
 
   return (
     <div className={styles.market}>
-      <div className={styles.marketHeader}>
-        <h2 className={styles.marketTitle}>📈 Mamazon Market</h2>
-        <p className={styles.marketSubtitle}>リアルタイム価格でトレード</p>
+      {/* ===== Portfolio summary ===== */}
+      <section className={styles.summary}>
+        <span className={kit.label}>総資産（現金 + 評価額）</span>
+        <AnimatedNumber value={Math.round(cash + totalValue)} prefix="¥" className={styles.total} />
+        <div className={styles.summaryRow}>
+          <span className={`${styles.plPill} ${totalPL >= 0 ? styles.up : styles.down}`}>
+            {totalPL >= 0 ? '▲' : '▼'} {yen(Math.abs(totalPL))}
+            {totalCost > 0 && <em>{pct((totalPL / totalCost) * 100)}</em>}
+          </span>
+          <span className={styles.muted}>含み損益</span>
+        </div>
+        <div className={styles.split}>
+          <div><span className={styles.muted}>現金</span><b>{yen(cash)}</b></div>
+          <div><span className={styles.muted}>評価額</span><b>{yen(totalValue)}</b></div>
+          <div><span className={styles.muted}>保有銘柄</span><b>{portfolio.length}</b></div>
+        </div>
+      </section>
+
+      <div className={kit.segmented} role="tablist">
+        {([['all', 'すべて'], ['stock', '株式'], ['crypto', '仮想通貨'], ['owned', '保有中']] as [Filter, string][]).map(([f, l]) => (
+          <button key={f} role="tab" aria-selected={filter === f} className={`${kit.segment} ${filter === f ? kit.segmentActive : ''}`} onClick={() => setFilter(f)}>
+            {l}
+          </button>
+        ))}
       </div>
 
-      {message && (
-        <div className={`${styles.msg} ${message.startsWith('❌') ? styles.msgError : styles.msgSuccess}`}>
-          {message}
-        </div>
-      )}
-
-      <div className={styles.assetGrid}>
-        {assets.map(asset => {
+      {/* ===== Asset list ===== */}
+      <section className={`${kit.panel} ${styles.list}`}>
+        {assets.length === 0 && (
+          <div className={styles.loading}><Loader size={20} className={kit.spinner} /></div>
+        )}
+        {assets.length > 0 && shown.length === 0 && (
+          <p className={styles.empty}>保有している銘柄はまだありません</p>
+        )}
+        {shown.map((asset) => {
           const price = prices[asset.id] || 0;
-          const prevPrice = prevPrices[asset.id] || price;
-          const diff = price - prevPrice;
-          const isUp = diff >= 0;
+          const prev = prevPrices[asset.id] || price;
+          const tickDir = price > prev ? 'up' : price < prev ? 'down' : '';
+          const ch = change(asset.id);
+          const up = ch >= 0;
+          const hist = priceHistory[asset.id] || [];
+          const isOpen = open === asset.id;
+          const held = holdings.find((h) => h.asset_id === asset.id);
+          const q = qty[asset.id] || 0;
+          const halving = asset.hasHalving ? halvingDaysLeft[asset.id] : undefined;
 
           return (
-            <div key={asset.id} className={styles.assetCard}>
-              <div className={styles.assetTop}>
-                <div className={styles.assetTopLeft}>
-                  <AssetLogo id={asset.id} type={asset.type} />
-                  <div>
-                    <div className={styles.assetName}>{asset.name}</div>
-                    <div className={styles.assetMeta}>
-                      <span className={styles.assetId}>{asset.id}</span>
-                      <span className={`${styles.assetType} ${asset.type === 'crypto' ? styles.crypto : styles.stock}`}>
-                        {asset.type === 'crypto' ? '仮想通貨' : '株式'}
+            <div key={asset.id} className={`${styles.item} ${isOpen ? styles.itemOpen : ''}`}>
+              <button className={styles.row} onClick={() => setOpen(isOpen ? null : asset.id)} aria-expanded={isOpen}>
+                <AssetLogo id={asset.id} type={asset.type} />
+                <div className={styles.nameCol}>
+                  <span className={styles.name}>{asset.name}</span>
+                  <span className={styles.meta}>
+                    {asset.id}
+                    <span className={`${styles.tag} ${asset.type === 'crypto' ? styles.tagCrypto : ''}`}>{asset.type === 'crypto' ? '暗号' : '株'}</span>
+                    {held && <span className={styles.tagOwn}>{held.quantity}</span>}
+                  </span>
+                </div>
+                <div className={styles.sparkCol}><Sparkline data={hist.slice(-40)} up={up} /></div>
+                <div className={styles.priceCol}>
+                  <span key={`${asset.id}-${tick}`} className={`${styles.price} ${tickDir ? styles[`flash_${tickDir}`] : ''}`}>{price ? yen(price) : '—'}</span>
+                  <span className={`${styles.chg} ${up ? styles.up : styles.down}`}>{pct(ch)}</span>
+                </div>
+                <ChevronDown size={16} className={styles.chev} />
+              </button>
+
+              {isOpen && (
+                <div className={styles.detail}>
+                  <div className={styles.chartWrap}><Sparkline data={hist} up={up} big /></div>
+                  <p className={styles.desc}>
+                    {asset.description}
+                    {halving !== undefined && (
+                      <span className={styles.halving}>
+                        {halving === 0 ? <><Flame size={12} /> 本日半減期</> : <><Zap size={12} /> 半減期まで{halving}日</>}
                       </span>
-                      {asset.hasHalving && halvingDaysLeft[asset.id] !== undefined && (
-                        <span className={styles.halvingBadge}>
-                          {halvingDaysLeft[asset.id] === 0 ? '🔥 半減期 今日！' : `⚡ 半減期 ${halvingDaysLeft[asset.id]}日`}
-                        </span>
-                      )}
+                    )}
+                  </p>
+
+                  {held && (
+                    <div className={styles.position}>
+                      <div><span className={styles.muted}>保有数</span><b>{held.quantity.toLocaleString()}</b></div>
+                      <div><span className={styles.muted}>平均取得</span><b>{yen(held.avg_buy_price)}</b></div>
+                      <div><span className={styles.muted}>損益</span><b className={held.pl >= 0 ? styles.up : styles.down}>{held.pl >= 0 ? '+' : '−'}{yen(Math.abs(held.pl))}</b></div>
                     </div>
-                    <div className={styles.assetDesc}>{asset.description}</div>
+                  )}
+
+                  <div className={styles.trade}>
+                    <div className={styles.stepper}>
+                      <button onClick={() => setQty({ ...qty, [asset.id]: Math.max(0, q - 1) })} aria-label="減らす"><Minus size={16} /></button>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="数量"
+                        value={q || ''}
+                        onChange={(e) => setQty({ ...qty, [asset.id]: parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0 })}
+                        aria-label="数量"
+                      />
+                      <button onClick={() => setQty({ ...qty, [asset.id]: q + 1 })} aria-label="増やす"><Plus size={16} /></button>
+                    </div>
+                    <div className={styles.quickQty}>
+                      <button onClick={() => setQty({ ...qty, [asset.id]: price ? maxBuy(cash, price) : 0 })}>最大購入</button>
+                      {held && <button onClick={() => setQty({ ...qty, [asset.id]: held.quantity })}>全て売却</button>}
+                    </div>
+                    <div className={styles.estimate}>
+                      <span className={styles.muted}>購入時（手数料込）</span>
+                      <b className={buyCost(price, q) > cash ? styles.down : ''}>{yen(buyCost(price, q))}</b>
+                    </div>
+                    <div className={styles.tradeBtns}>
+                      <button className={kit.success} onClick={() => handleTrade(asset.id, 'buy')} disabled={!q || trading !== null}>
+                        {trading === `${asset.id}:buy` ? <Loader size={16} className={kit.spinner} /> : '買う'}
+                      </button>
+                      <button className={kit.danger} onClick={() => handleTrade(asset.id, 'sell')} disabled={!q || !held || trading !== null}>
+                        {trading === `${asset.id}:sell` ? <Loader size={16} className={kit.spinner} /> : '売る'}
+                      </button>
+                    </div>
+                    {lastTrade?.id === asset.id && (
+                      <p className={`${styles.tradeMsg} ${lastTrade.ok ? styles.up : styles.down}`}>{lastTrade.text}</p>
+                    )}
                   </div>
                 </div>
-                <div className={styles.priceBlock}>
-                  <div className={`${styles.price} ${isUp ? styles.priceUp : styles.priceDown}`}>
-                    ¥{price.toLocaleString()}
-                  </div>
-                  <div className={`${styles.priceDiff} ${isUp ? styles.diffUp : styles.diffDown}`}>
-                    {isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                    {diff > 0 ? '+' : ''}{diff.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-
-              <div className={styles.sparklineWrapper}>
-                <Sparkline data={priceHistory[asset.id] || []} isUp={isUp} />
-              </div>
-
-              <div className={styles.tradeRow}>
-                <input
-                  type="number"
-                  min="1"
-                  placeholder="数量"
-                  className={styles.tradeInput}
-                  value={tradeAmounts[asset.id] || ''}
-                  onChange={e => setTradeAmounts({ ...tradeAmounts, [asset.id]: Number(e.target.value) })}
-                />
-                <button
-                  className={`${styles.tradeBtn} ${styles.buy}`}
-                  onClick={() => handleTrade(asset.id, 'buy')}
-                  disabled={!tradeAmounts[asset.id]}
-                >
-                  買う
-                </button>
-                <button
-                  className={`${styles.tradeBtn} ${styles.sell}`}
-                  onClick={() => handleTrade(asset.id, 'sell')}
-                  disabled={!tradeAmounts[asset.id]}
-                >
-                  売る
-                </button>
-              </div>
+              )}
             </div>
           );
         })}
-      </div>
-
-      <div className={styles.portfolio}>
-        <h3 className={styles.portfolioTitle}>💼 保有資産</h3>
-        {portfolio.length === 0 ? (
-          <p className={styles.emptyNote}>まだアセットを保有していません。買ってみましょう！</p>
-        ) : (
-          <div className={styles.portfolioList}>
-            {portfolio.map(p => {
-              const asset = assets.find(a => a.id === p.asset_id);
-              const currentPrice = prices[p.asset_id] || 0;
-              const currentValue = currentPrice * p.quantity;
-              const profit = currentValue - p.avg_buy_price * p.quantity;
-              return (
-                <div key={p.asset_id} className={styles.portfolioItem}>
-                  <div>
-                    <div className={styles.pfName}>{asset?.name || p.asset_id}</div>
-                    <div className={styles.pfMeta}>
-                      {p.quantity}株 · 平均 ¥{Math.round(p.avg_buy_price).toLocaleString()}
-                    </div>
-                  </div>
-                  <div className={styles.pfValues}>
-                    <div className={styles.pfValue}>¥{currentValue.toLocaleString()}</div>
-                    <div className={`${styles.pfProfit} ${profit >= 0 ? styles.profitUp : styles.profitDown}`}>
-                      {profit >= 0 ? '+' : ''}{Math.round(profit).toLocaleString()}円
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      </section>
+      <p className={styles.footnote}>価格は5秒ごとに更新 ・ 変動率は表示中のチャート期間の始値比 ・ 取引には手数料とスリッページがかかります</p>
     </div>
   );
 }
